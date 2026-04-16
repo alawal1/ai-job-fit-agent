@@ -1,7 +1,7 @@
-ESG Data Model (KPMG)
-- Developed structured data model for CSRD reporting requirements
-- Translated regulatory requirements into data architecture components
-- Identified relevant ESG data categories and reporting structures 
+ESG Data Model (KPMG, 2024)
+- Mapped ~400 unstructured ESG data categories across business units to ESRS reporting requirements
+- Built a reporting data model the client adopted without changes
+- Translated CSRD regulatory requirements into a scalable data architecture
 
 Python Research Tool (KPMG)
 - Tested and improved frontend of a Python-based application

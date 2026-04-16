@@ -5,7 +5,10 @@ from agent import run_agent
 import openpyxl
 
 os.makedirs("outputs", exist_ok=True)
-
+for file in os.listdir("outputs"):
+    if file.endswith(".md"):
+        os.remove(os.path.join("outputs", file))
+        
 def save_to_tracker(result, url, filepath="tracker.xlsx"):
     try:
         wb = openpyxl.load_workbook(filepath)
@@ -16,16 +19,16 @@ def save_to_tracker(result, url, filepath="tracker.xlsx"):
         ws.append(["Company", "Position", "Industry", "Fit Score", "Decision", "Matches", "Gaps", "Reasoning", "URL", "Date"])
     
         ws.append([
-        result.get("company", ""),
-        result.get("position", ""),
-        result.get("industry", ""),
-        result.get("fit_score", ""),
-        result.get("decision", ""),
-        ", ".join(result.get("matches", [])),
-        ", ".join(result.get("gaps", [])),
-        result.get("reasoning", ""),
-        url,
-        str(date.today())
+            result.get("company", ""),
+            result.get("position", ""),
+            result.get("industry", ""),
+            result.get("fit_score", ""),
+            result.get("decision", ""),
+            ", ".join(result.get("matches", [])),
+            ", ".join(result.get("gaps", [])),
+            result.get("reasoning", ""),
+            url,
+            str(date.today())
     ])  
     wb.save(filepath)
 
@@ -51,10 +54,13 @@ for i, url in enumerate(urls):
     try:
         result = run_agent(url)
         
-        with open(f"outputs/job_{i+1}.md", "w") as f:
+        
+        company_name = result.get('company', f'job_{i+1}').replace(" ", "_").lower()
+        with open(f"outputs/{company_name}.md", "w") as f:
             f.write(f"# {result.get('company')} — {result.get('position')}\n\n")
             f.write(f"**Fit Score:** {result.get('fit_score')}/100\n")
-            f.write(f"**Decision:** {result.get('decision', '').upper()}\n\n")
+            final_decision = "apply" if result.get("fit_score", 0) >= 70 else "skip"
+            f.write(f"**Decision:** {final_decision.upper()}\n\n")            
             f.write(f"## Reasoning\n{result.get('reasoning', '')}\n\n")
             f.write(f"## Matches\n")
             for m in result.get("matches", []):
