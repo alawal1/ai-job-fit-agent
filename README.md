@@ -1,16 +1,34 @@
-# AI Job Fit Agent
+# Job Fit Agent
 
-An AI-powered agent that evaluates job fit and automatically tailors CVs based on job descriptions.
+A Python agent that analyzes job postings and evaluates candidate fit using an agentic loop with tool use.
 
 ## What it does
-- Analyzes job descriptions
-- Extracts key requirements
-- Compares them with a candidate profile
-- Scores job fit (0–100)
-- Identifies strengths and gaps
-- Generates an improved CV
+- Fetches job postings directly from URLs
+- Loads a structured candidate profile from local markdown files
+- Reasons about fit using OpenAI tool use — the model decides what to check, not hardcoded steps
+- Returns a structured verdict: fit score, matches, gaps, CV recommendations
+- Batch processes multiple URLs and saves results to Excel automatically
+- Skips roles below 70% fit and detects duplicates
 
 ## How to run
 
+Add job URLs to `data/jobs/urls.txt`, one per line:
+```
+https://company.com/job-posting
+```
+
+Then run:
 ```bash
-python main.py --job "Your job description" # subject to change
+python batch.py
+```
+
+Results are saved to `outputs/` as markdown reports and to `tracker.xlsx`.
+
+## Project structure
+- `agent.py` — agentic loop, tool definitions, OpenAI integration
+- `batch.py` — batch runner, Excel tracker, duplicate detection
+- `data/` — candidate profile files (skills, experience, education, projects)
+- `outputs/` — per-job markdown reports
+
+## Stack
+Python, OpenAI API (tool use), openpyxl, BeautifulSoup
