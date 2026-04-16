@@ -82,6 +82,7 @@ def run_agent(url: str) -> str:
             - Always call load_full_profile to get candidate data
             - Never guess or invent information
             - Only reason after you have tool outputs
+            - matches and gaps in excel tracker file must be short keywords or skill names only (2-3 words max), never full sentences
 
             Return ONLY valid JSON, no other text:
             {
