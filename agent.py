@@ -1,6 +1,19 @@
 from openai import OpenAI
 from dotenv import load_dotenv
 import json
+import requests
+from bs4 import BeautifulSoup
+
+def fetch_job_posting(url: str) -> str:
+    print(f"STEP: fetching URL: {url}")
+    
+    r = requests.get(url, timeout=10)
+    print(f"STEP: fetching URL: {url}")
+    
+    soup = BeautifulSoup(r.text, "html.parser")
+    for tag in soup(["script", "style", "nav", "footer"]):
+        tag.decompose()
+    return soup.get_text(separator="\n", strip=True)[:6000]
 
 load_dotenv() # Loads API key from .env file
 client = OpenAI() # Creates client (connection to the AI)
