@@ -120,7 +120,8 @@ def run_agent(url: str) -> str:
         response = client.chat.completions.create(
             model="gpt-4o",
             tools=TOOL_DEFINITIONS,
-            messages=messages
+            messages=messages,
+            temperature=0
         )
 
         message = response.choices[0].message

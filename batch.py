@@ -18,19 +18,19 @@ def save_to_tracker(result, url, filepath="tracker.xlsx"):
         ws = wb.active
         ws.append(["Company", "Position", "Industry", "Fit Score", "Decision", "Matches", "Gaps", "Reasoning", "CV: Add", "CV: Remove", "URL", "Date"])    
         
-        ws.append([
-            result.get("company", ""),
-            result.get("position", ""),
-            result.get("industry", ""),
-            result.get("fit_score", ""),
-            result.get("decision", ""),
-            ", ".join(result.get("matches", [])),
-            ", ".join(result.get("gaps", [])),
-            result.get("reasoning", ""),
-            ", ".join(result.get("cv_recommendations", {}).get("add", [])),
-            ", ".join(result.get("cv_recommendations", {}).get("remove", [])),
-            url,
-            str(date.today())
+    ws.append([
+        result.get("company", ""),
+        result.get("position", ""),
+        result.get("industry", ""),
+        result.get("fit_score", ""),
+        result.get("decision", ""),
+        ", ".join(result.get("matches", [])),
+        ", ".join(result.get("gaps", [])),
+        result.get("reasoning", ""),
+        ", ".join(result.get("cv_recommendations", {}).get("add", [])),
+        ", ".join(result.get("cv_recommendations", {}).get("remove", [])),
+        url,
+        str(date.today())
     ])  
     wb.save(filepath)
 
