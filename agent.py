@@ -27,6 +27,15 @@ def load_full_profile() -> str:
             filepath = os.path.join("data", filename)
             combined += load_file(filepath) + "\n\n"
     return combined
+
+def parse_result(text: str) -> dict:
+    try:
+        text = text.replace("```json", "").replace("```", "").strip()
+        return json.loads(text)
+    except:
+        return {"error": "Could not parse result", "raw": text}
+
+
 # TOOLS
 
 TOOL_DEFINITIONS = [
@@ -109,7 +118,7 @@ def run_agent(url: str) -> str:
         messages.append(message)
 
         if response.choices[0].finish_reason == "stop":
-            return message.content
+            return parse_result(message.content)
 
         if response.choices[0].finish_reason == "tool_calls":
             for tool_call in message.tool_calls:
