@@ -1,12 +1,11 @@
 import argparse
 from agent import run_agent, load_cv
-
+print("Script started")
 parser = argparse.ArgumentParser()
-parser.add_argument("--job", type=str, help="Job description")
+parser.add_argument("--file", type=str, help="Path to job description file")
 args = parser.parse_args()
-
 cv = load_cv("data/cv.md")
-
+print("DEBUG: job description loaded")
     
 def print_report(result):
     print("\n=== JOB FIT ANALYSIS ===\n")
@@ -66,13 +65,22 @@ def save_markdown_report(result, filename="report.md"):
 
 
 
-
-
-
-
-if args.job:
-    result = run_agent(args.job, cv)
-    print_report(result)
-    save_markdown_report(result, "output.md")
+if args.file:
+    with open(args.file, "r") as f:
+        job_description = f.read()
+elif args.job:
+    job_description = args.job
 else:
-    print("Please provide a job description using --job")
+    print("DEBUG: no input detected")
+    print("Please provide --job or --file")
+    exit()
+
+try:
+    result = run_agent(job_description, cv)
+    print("DEBUG: agent finished")
+except Exception as e:
+    print("ERROR:", e)
+
+print("DEBUG: about to print report")
+print_report(result)
+save_markdown_report(result, "output.md")
