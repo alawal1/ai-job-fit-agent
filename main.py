@@ -1,11 +1,13 @@
 import argparse
-from agent import run_agent, load_cv
-print("Script started")
+from agent import run_agent, load_cv, fetch_job_posting
+
+# print("Script started")
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", type=str, help="Path to job description file")
+parser.add_argument("--job", type=str, help="Job description or URL")
 args = parser.parse_args()
 cv = load_cv("data/cv.md")
-print("DEBUG: job description loaded")
+print("STEP: job description loaded")
     
 def print_report(result):
     print("\n=== JOB FIT ANALYSIS ===\n")
@@ -64,23 +66,33 @@ def save_markdown_report(result, filename="report.md"):
         f.write(result["improved_cv"])
 
 
+print("STEP: starting input handling")
 
 if args.file:
     with open(args.file, "r") as f:
+        print(f"STEP: reading file {args.file}")
         job_description = f.read()
+
 elif args.job:
-    job_description = args.job
+    print(f"STEP: received job input: {args.job[:50]}...")
+    if args.job.startswith("http"):
+        from agent import fetch_job_posting
+        job_description = fetch_job_posting(args.job)
+        print("STEP: fetched job from URL")
+    else:
+        job_description = args.job
+
 else:
-    print("DEBUG: no input detected")
     print("Please provide --job or --file")
     exit()
 
+print("STEP: running agent...")
 try:
     result = run_agent(job_description, cv)
-    print("DEBUG: agent finished")
+    print("STEP: agent finished")
 except Exception as e:
     print("ERROR:", e)
 
-print("DEBUG: about to print report")
+print("STEP: about to print report")
 print_report(result)
 save_markdown_report(result, "output.md")
