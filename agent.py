@@ -87,6 +87,7 @@ def run_agent(url: str) -> str:
             } 
             Rules for the output:
             - fit_score is 0-100, never 0-10
+            - - Ignore geography as a gap unless the job explicitly requires a specific country or city other than Stockholm
             - Use "you" and "your" when referring to the candidate, never their name
             """
             
