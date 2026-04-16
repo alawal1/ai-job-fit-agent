@@ -1,6 +1,7 @@
 from openai import OpenAI
 from dotenv import load_dotenv #  reads .env file 
 import json
+import os
 
 load_dotenv()
 client = OpenAI()
@@ -18,6 +19,15 @@ def fetch_job_posting(url: str) -> str:
 def load_cv(filepath: str) -> str:
     with open(filepath, "r") as f:
         return f.read()
+
+def load_full_profile() -> str:
+    combined = ""
+    for filename in os.listdir("data"):
+        if filename.endswith(".md"):
+            filepath = os.path.join("data", filename)
+            combined += load_cv(filepath) + "\n\n"
+    return combined
+# TOOLS
 
 TOOL_DEFINITIONS = [
     {
@@ -47,12 +57,25 @@ TOOL_DEFINITIONS = [
                 "required": ["filepath"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "load_full_profile",
+            "description": "Loads the candidate's full profile including CV, experience, education, skills, projects and positioning.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
-
+# TOOL DICTIONARY / TRAJECTORY
 TOOLS = {
     "fetch_job_posting": fetch_job_posting,
     "load_cv": load_cv,
+    "load_full_profile": load_full_profile,
 }
 
 def run_agent(url: str) -> str:
