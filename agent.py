@@ -83,6 +83,8 @@ def run_agent(url: str) -> str:
             - Never guess or invent information
             - Only reason after you have tool outputs
             - matches and gaps in excel tracker file must be short keywords or skill names only (2-3 words max), never full sentences
+            - cv_recommendations.add: specific skills or experiences worth adding to the CV for this role
+            - cv_recommendations.remove: sections or skills that may confuse or weaken this specific application 
 
             Return ONLY valid JSON, no other text:
             {
@@ -93,7 +95,11 @@ def run_agent(url: str) -> str:
                 "decision": "apply/skip",
                 "matches": [],
                 "gaps": [],
-                "reasoning": ""                
+                "reasoning": "",
+                "cv_recommendations": {
+                    "add": [],
+                    "remove": []
+                }               
             } 
             Rules for the output:
             - fit_score is 0-100, never 0-10

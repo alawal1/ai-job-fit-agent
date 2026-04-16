@@ -16,8 +16,8 @@ def save_to_tracker(result, url, filepath="tracker.xlsx"):
     except FileNotFoundError:
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["Company", "Position", "Industry", "Fit Score", "Decision", "Matches", "Gaps", "Reasoning", "URL", "Date"])
-    
+        ws.append(["Company", "Position", "Industry", "Fit Score", "Decision", "Matches", "Gaps", "Reasoning", "CV: Add", "CV: Remove", "URL", "Date"])    
+        
         ws.append([
             result.get("company", ""),
             result.get("position", ""),
@@ -27,6 +27,8 @@ def save_to_tracker(result, url, filepath="tracker.xlsx"):
             ", ".join(result.get("matches", [])),
             ", ".join(result.get("gaps", [])),
             result.get("reasoning", ""),
+            ", ".join(result.get("cv_recommendations", {}).get("add", [])),
+            ", ".join(result.get("cv_recommendations", {}).get("remove", [])),
             url,
             str(date.today())
     ])  
@@ -68,6 +70,9 @@ for i, url in enumerate(urls):
             f.write(f"\n## Gaps\n")
             for g in result.get("gaps", []):
                 f.write(f"- {g}\n")
+            f.write(f"\n## CV Recommendations\n")
+            f.write(f"**Add:** {', '.join(result.get('cv_recommendations', {}).get('add', []))}\n")
+            f.write(f"**Remove:** {', '.join(result.get('cv_recommendations', {}).get('remove', []))}\n")
 
         if result.get("fit_score", 0) >= 70:
             save_to_tracker(result, url)
