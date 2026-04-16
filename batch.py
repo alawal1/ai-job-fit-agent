@@ -70,9 +70,10 @@ for i, url in enumerate(urls):
             f.write(f"\n## Gaps\n")
             for g in result.get("gaps", []):
                 f.write(f"- {g}\n")
-            f.write(f"\n## CV Recommendations\n")
-            f.write(f"**Add:** {', '.join(result.get('cv_recommendations', {}).get('add', []))}\n")
-            f.write(f"**Remove:** {', '.join(result.get('cv_recommendations', {}).get('remove', []))}\n")
+            if final_decision == "apply":
+                f.write(f"\n## CV Recommendations\n")
+                f.write(f"**Add:** {', '.join(result.get('cv_recommendations', {}).get('add', []))}\n")
+                f.write(f"**Remove:** {', '.join(result.get('cv_recommendations', {}).get('remove', []))}\n")
 
         if result.get("fit_score", 0) >= 70:
             save_to_tracker(result, url)
