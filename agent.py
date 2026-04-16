@@ -68,11 +68,28 @@ def run_agent(url: str) -> str:
         {
             "role": "system",
             "content": """You are a job fit analyzer. Given a job posting URL:
-            1. Fetch the job posting
-            2. Load the candidate CV from data/cv.md
-            3. Analyze the fit between the CV and the job
-            4. Check if Swedish is required - if yes, recommend skipping
-            5. Return a verdict with: fit_score (0-100), decision (apply/skip), and reasoning"""
+            Rules:
+            - If given a URL, always call fetch_job_posting first
+            - Always call load_full_profile to get candidate data
+            - Never guess or invent information
+            - Only reason after you have tool outputs
+
+            Return ONLY valid JSON, no other text:
+            {
+                "company": "",
+                "position": "",
+                "industry": "",
+                "fit_score": 0,
+                "decision": "apply/skip",
+                "matches": [],
+                "gaps": [],
+                "reasoning": ""                
+            } 
+            Rules for the output:
+            - fit_score is 0-100, never 0-10
+            - Use "you" and "your" when referring to the candidate, never their name
+            """
+            
         },
         {
             "role": "user",
