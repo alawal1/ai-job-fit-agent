@@ -16,7 +16,7 @@ def fetch_job_posting(url: str) -> str:
         tag.decompose()
     return soup.get_text(separator="\n", strip=True)[:6000]
 
-def load_cv(filepath: str) -> str:
+def load_file(filepath: str) -> str:
     with open(filepath, "r") as f:
         return f.read()
 
@@ -25,7 +25,7 @@ def load_full_profile() -> str:
     for filename in os.listdir("data"):
         if filename.endswith(".md"):
             filepath = os.path.join("data", filename)
-            combined += load_cv(filepath) + "\n\n"
+            combined += load_file(filepath) + "\n\n"
     return combined
 # TOOLS
 
@@ -47,20 +47,6 @@ TOOL_DEFINITIONS = [
     {
         "type": "function",
         "function": {
-            "name": "load_cv",
-            "description": "Loads the candidate CV from a file.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "filepath": {"type": "string", "description": "Path to the CV file"}
-                },
-                "required": ["filepath"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
             "name": "load_full_profile",
             "description": "Loads the candidate's full profile including CV, experience, education, skills, projects and positioning.",
             "parameters": {
@@ -74,7 +60,6 @@ TOOL_DEFINITIONS = [
 # TOOL DICTIONARY / TRAJECTORY
 TOOLS = {
     "fetch_job_posting": fetch_job_posting,
-    "load_cv": load_cv,
     "load_full_profile": load_full_profile,
 }
 
