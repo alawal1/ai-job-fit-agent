@@ -2,28 +2,46 @@ from openai import OpenAI
 from dotenv import load_dotenv #  reads .env file 
 import json
 import os
+from requests.exceptions import RequestException
+
 
 load_dotenv()
 client = OpenAI()
 
-
 def fetch_job_posting(url: str) -> str:
     import requests
     from bs4 import BeautifulSoup
-    r = requests.get(url, timeout=10)
+
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+    except RequestException as exc:
+        raise RuntimeError(f"Failed to fetch job posting: {exc}") from exc
+
     soup = BeautifulSoup(r.text, "html.parser")
     for tag in soup(["script", "style", "nav", "footer"]):
         tag.decompose()
+
     return soup.get_text(separator="\n", strip=True)[:6000]
+
+# def fetch_job_posting(url: str) -> str:
+#     import requests
+#     from bs4 import BeautifulSoup
+#     r = requests.get(url, timeout=10)
+#     soup = BeautifulSoup(r.text, "html.parser")
+#     for tag in soup(["script", "style", "nav", "footer"]):
+#         tag.decompose()
+#     return soup.get_text(separator="\n", strip=True)[:6000]
 
 def load_file(filepath: str) -> str:
     with open(filepath, "r") as f:
         return f.read()
 
+
 def load_full_profile() -> str:
     combined = ""
     for filename in os.listdir("data"):
-        if filename.endswith(".md"):
+        if filename.endswith(".md") and filename != "cv.md":
             filepath = os.path.join("data", filename)
             combined += load_file(filepath) + "\n\n"
     return combined
@@ -123,7 +141,6 @@ def run_agent(url: str) -> str:
             messages=messages,
             temperature=0
         )
-
         message = response.choices[0].message
         messages.append(message)
 
