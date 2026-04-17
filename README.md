@@ -1,38 +1,37 @@
 # Job Fit Agent
 
-A Python agent that analyzes job postings and evaluates candidate fit using an agentic loop with tool use.
+A web-enabled Python project that analyzes job postings against a candidate profile and presents fit recommendations through a clean interface.
 
 ## What it does
-- Fetches job postings directly from URLs
-- Loads a structured candidate profile from local markdown files
-- Reasons about fit using OpenAI tool use — the model decides what to check, not hardcoded steps
-- Returns a structured verdict: fit score, matches, gaps, CV recommendations
-- Batch processes multiple URLs and saves results to Excel automatically
-- Skips roles below 70% fit and detects duplicates
+- Loads candidate profile data from local markdown files in `data/`
+- Fetches job posting content from a provided URL
+- Uses OpenAI tool use to evaluate fit and return structured output
+- Produces fit score, decision, matches, gaps, reasoning, and CV recommendations
+- Serves a web UI for pasting job URLs and viewing results immediately
 
 ## How to run
-
-Add job URLs to `data/jobs/urls.txt`, one per line:
-```
-https://company.com/job-posting
-```
-
-Then run:
+From the project root:
 ```bash
-python batch.py
+uvicorn backend:app --reload
 ```
+Then open:
 
-Results are saved to `outputs/` as markdown reports and to `tracker.xlsx`.
-
-## Project structure
-- `agent.py` — agentic loop, tool definitions, OpenAI integration
-- `batch.py` — batch runner, Excel tracker, duplicate detection
-- `data/` — candidate profile files (skills, experience, education, projects)
-- `outputs/` — per-job markdown reports
+`http://localhost:8000`
 
 ## Stack
-Python, OpenAI API (tool use), openpyxl, BeautifulSoup
+- Python
+- FastAPI
+- OpenAI API with tool use
+- vanilla JavaScript frontend
+
+## Project structure
+- `agent.py` — OpenAI integration, tool definitions, job posting fetcher, profile loader
+- `batch.py` — batch processing helper for bulk job analysis
+- `backend.py` — FastAPI backend exposing `/analyze` and serving `index.html`
+- `index.html` — self-contained frontend UI
+- `data/` — candidate profile and job URL source files
 
 ## Known limitations
-- CV rewriting tends to hallucinate actions not present in the original bullets. Use suggestions as inspiration only, not verbatim.
-- LinkedIn URLs and some career sites block scraping and return no data.
+- LinkedIn URLs and some protected career sites may block scraping or return unusable HTML
+- Results depend on scraper success and can fail if page structure changes or content is restricted
+- CV recommendations should be reviewed manually before use
