@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import date
-from agent import run_agent, client
+from agent import run_agent, client, fetch_job_posting
 import openpyxl
 
 os.makedirs("outputs", exist_ok=True)
@@ -34,52 +34,53 @@ def save_to_tracker(result, url, filepath="tracker.xlsx"):
     ])  
     wb.save(filepath)
 
-def generate_cv_suggestions(result, cv_path="data/cv.md"):
+
+def improve_cv(result, cv_path, job_text):
+    """Return side-by-side rewrite suggestions for each CV work experience bullet."""
     with open(cv_path, "r") as f:
         cv_content = f.read()
-    
+
     response = client.chat.completions.create(
         model="gpt-4o",
         temperature=0,
         messages=[
             {
                 "role": "system",
-                "content": """You are an expert CV advisor.
-                Given a CV and a job, suggest specific targeted changes only.
+                "content": """You are an expert CV advisor focused on job alignment.
+                Given a CV and a target job posting, suggest concise rewrite improvements for work experience bullets.
                 Rules:
-                - Only suggest changes where there is a clear reason
-                - Never invent experience that isn't in the CV
-                - For rewrites, show original bullet and suggested version
-                - Be concise and specific
-                - Return as clean markdown"""
+                - Prioritize inserting specific job keywords, skills, and requirements from the full job posting.
+                - Keep bullets short and relevant rather than verbose.
+                - Do not invent new accomplishments or change the original facts.
+                - Show each bullet's original text and a suggested rewritten version side by side.
+                - Return clean markdown with a clear structure.
+                - never add verbs or actions that aren't in the original bullet
+                """
             },
             {
                 "role": "user",
                 "content": f"""
                 CV:
                 {cv_content}
-                
+
                 Job: {result.get('position')} at {result.get('company')}
-                Add to CV: {', '.join(result.get('cv_recommendations', {}).get('add', []))}
-                Remove from CV: {', '.join(result.get('cv_recommendations', {}).get('remove', []))}
-                Gaps to address: {', '.join(result.get('gaps', []))}
-                
-                Return markdown with these sections:
-                ## Add to CV
-                ## Remove from CV  
-                ## Suggested rewrites
+                Job posting:
+                {job_text}
+
+                Focus on the job's matches, gaps, and CV recommendations.
+                Insert the most relevant keywords and responsibilities from the job posting into each bullet.
+
+                Return markdown with a section titled "## Bullet rewrite suggestions".
+                For each work experience bullet, include:
+                - Original: <original bullet>
+                - Suggested: <rewritten version>
                 """
             }
         ]
     )
     return response.choices[0].message.content
 
-def save_cv_suggestions(content, company):
-    company_slug = company.replace(" ", "_").lower()
-    filename = f"outputs/{company_slug}_cv_suggestions.md"
-    with open(filename, "w") as f:
-        f.write(content)
-    return filename
+
 
 def already_tracked(url, filepath="tracker.xlsx"):
     try:
@@ -101,6 +102,7 @@ for i, url in enumerate(urls):
         print(f"↷ Already in tracker, skipping")
         continue
     try:
+        job_text = fetch_job_posting(url)
         result = run_agent(url)
         
         company_name = result.get('company', f'job_{i+1}').replace(" ", "_").lower()
@@ -121,15 +123,19 @@ for i, url in enumerate(urls):
                 f.write(f"\n## CV Recommendations\n")
                 f.write(f"**Add:** {', '.join(result.get('cv_recommendations', {}).get('add', []))}\n")
                 f.write(f"**Remove:** {', '.join(result.get('cv_recommendations', {}).get('remove', []))}\n")
-
+        
         if final_decision == "apply":
             save_to_tracker(result, url)
-            cv_suggestions = generate_cv_suggestions(result)
-            cv_file = save_cv_suggestions(cv_suggestions, result.get('company', ''))
+            cv_improvements = improve_cv(result, "data/cv.md", job_text)
+            improvement_file = f"outputs/{company_name}_cv.md"
+            with open(improvement_file, "w") as f:
+                f.write(f"# CV Improvements — {result.get('company')} {result.get('position')}\n\n")
+                f.write(cv_improvements)
             print(f"✓ {result.get('company')} — {result.get('fit_score')}/100 — APPLY → saved to tracker")
-            print(f"  CV suggestions: {cv_file}")
+            print(f"  CV improvements: {improvement_file}")
         else:
             print(f"✗ {result.get('company')} — {result.get('fit_score')}/100 — SKIP")
+
         
     except Exception as e:
         import traceback
