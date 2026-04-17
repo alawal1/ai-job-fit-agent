@@ -32,3 +32,7 @@ Results are saved to `outputs/` as markdown reports and to `tracker.xlsx`.
 
 ## Stack
 Python, OpenAI API (tool use), openpyxl, BeautifulSoup
+
+## Known limitations
+- CV rewriting tends to hallucinate actions not present in the original bullets. Use suggestions as inspiration only, not verbatim.
+- LinkedIn URLs and some career sites block scraping and return no data.
