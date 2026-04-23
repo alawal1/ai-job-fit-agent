@@ -1,41 +1,13 @@
-# agent.py
 from openai import OpenAI
 from dotenv import load_dotenv #  reads .env file 
 import json
-<<<<<<< Updated upstream
-import os
-=======
 
 from skills.fetch_job import fetch_job_posting
 from skills.load_profile import load_full_profile
->>>>>>> Stashed changes
 
 load_dotenv()
 client = OpenAI()
 
-<<<<<<< Updated upstream
-
-def fetch_job_posting(url: str) -> str:
-    import requests
-    from bs4 import BeautifulSoup
-    r = requests.get(url, timeout=10)
-    soup = BeautifulSoup(r.text, "html.parser")
-    for tag in soup(["script", "style", "nav", "footer"]):
-        tag.decompose()
-    return soup.get_text(separator="\n", strip=True)[:6000]
-
-def load_file(filepath: str) -> str:
-    with open(filepath, "r") as f:
-        return f.read()
-
-def load_full_profile() -> str:
-    combined = ""
-    for filename in os.listdir("data"):
-        if filename.endswith(".md"):
-            filepath = os.path.join("data", filename)
-            combined += load_file(filepath) + "\n\n"
-    return combined
-=======
 # def fetch_job_posting(url: str) -> str:
 #     import requests
 #     from bs4 import BeautifulSoup
@@ -44,7 +16,6 @@ def load_full_profile() -> str:
 #     for tag in soup(["script", "style", "nav", "footer"]):
 #         tag.decompose()
 #     return soup.get_text(separator="\n", strip=True)[:6000]
->>>>>>> Stashed changes
 
 def parse_result(text: str) -> dict:
     try:
@@ -141,7 +112,6 @@ def run_agent(url: str) -> str:
             messages=messages,
             temperature=0
         )
-
         message = response.choices[0].message
         messages.append(message)
 
