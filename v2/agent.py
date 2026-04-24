@@ -15,9 +15,13 @@ from dotenv import load_dotenv
 
 from skills.fetch_job import fetch_job_posting
 from skills.extract_signals import extract_job_signals
+from skills.check_filters import check_hard_filters
+from skills.assess_fit import assess_fit
 
 load_dotenv()
 client = OpenAI()
+with open("data/profile.json") as f:
+    PROFILE = json.load(f)
 
 MAX_ITERATIONS = 8
 MODEL = "gpt-4o"
@@ -66,32 +70,94 @@ TOOL_DEFINITIONS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_hard_filters",
+            "description": (
+                "Checks whether a job passes the candidate's hard filters (language and seniority). "
+                "Call this after extract_job_signals has returned successfully. "
+                "You MUST pass the full signals object returned by extract_job_signals as the 'signals' argument. "
+                "Do not call this tool without the signals argument. "
+                "If this returns passed=false, the triage is complete — return a skip verdict immediately. "
+                "Do not call assess_fit when hard filters fail."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "signals": {
+                        "type": "object",
+                        "description": "The signals object returned by extract_job_signals.",
+                    },
+                },
+                "required": ["signals"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "assess_fit",
+            "description": (
+                "Evaluates how well a job matches the candidate's profile. "
+                "Call only after check_hard_filters has returned passed=true. "
+                "You MUST pass the full signals object as the 'signals' argument. "
+                "Returns a verdict (apply/borderline/skip) with confidence and structured reasoning. "
+                "If verdict is 'borderline' with non-empty open_questions, you may call this tool "
+                "a second time later with a 'company_context' argument (not yet supported — only call once for now)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "signals": {
+                        "type": "object",
+                        "description": "The signals object returned by extract_job_signals.",
+                    },
+                },
+                "required": ["signals"],
+            },
+        },
+    },
 ]
 
 
 # Runtime implementations. Tools that need the OpenAI client get it passed in.
 def _execute_tool(name: str, args: dict) -> dict:
+    print(f"[TOOL CALLED] name={name} args_keys={list(args.keys())}", flush=True)
+
     if name == "fetch_job_posting":
         text = fetch_job_posting(args["url"])
         result = {"text": text, "length_chars": len(text)}
     elif name == "extract_job_signals":
         result = extract_job_signals(args["job_text"], client)
+    elif name == "check_hard_filters":
+        if "signals" not in args:
+            result = {"error": "Missing 'signals' argument. You must pass the signals object from extract_job_signals."}
+        else:
+            result = check_hard_filters(args["signals"], PROFILE, client)
+    elif name == "assess_fit":
+        if "signals" not in args:
+            result = {"error": "Missing 'signals' argument. You must pass the signals object from extract_job_signals."}
+        else:
+            result = assess_fit(args["signals"], PROFILE, client)
     else:
         result = {"error": f"Unknown tool: {name}"}
 
-    print(f"[TOOL] {name} → {json.dumps(result, ensure_ascii=False)[:500]}", flush=True)
+    print(f"[TOOL RESULT] {name} → {json.dumps(result, ensure_ascii=False)[:300]}", flush=True)
     return result
 
+SYSTEM_PROMPT = """You are a job triage agent. You decide whether a job posting is worth the user applying to: apply, borderline, or skip.
 
-SYSTEM_PROMPT = """You are a job triage agent. Your job is to decide whether a job posting is worth the user applying to, returning one of three verdicts: apply, borderline, or skip.
+Required workflow:
+1. Call fetch_job_posting to get the text.
+2. Call extract_job_signals on the text — unless it's a dead link or boilerplate page.
+3. Call check_hard_filters on the signals.
+4. If check_hard_filters returns passed=false, return verdict SKIP with the failure reasons. Do not call more tools.
+5. If check_hard_filters returns passed=true, return a brief summary with verdict APPLY (full fit assessment coming in a future tool).
+6. Return the assess_fit verdict (apply/borderline/skip), confidence, and reasoning as your final answer.
 
-You have tools to fetch and extract signals from job postings. More tools will be added over time. For now:
-- Start by fetching the posting.
-- Extract triage-relevant signals.
-- Return a brief summary of what you learned. (Full triage logic comes after more tools are added.)
-
-Efficiency matters. Do not call tools speculatively. You are not required to call every available tool."""
-
+Do not produce a final answer on a live posting without calling extract_job_signals and check_hard_filters.
+Efficiency matters: do not call any tool more than once unnecessarily."""
 
 def run_agent_v2(url: str) -> dict:
     """
@@ -135,10 +201,12 @@ def run_agent_v2(url: str) -> dict:
         if choice.finish_reason == "tool_calls":
             for tool_call in message.tool_calls:
                 tool_calls_made += 1
+                print(f"[LOOP] iter={iteration} call#{tool_calls_made} → {tool_call.function.name}", flush=True)
                 args = json.loads(tool_call.function.arguments)
                 try:
                     result = _execute_tool(tool_call.function.name, args)
                 except Exception as e:
+                    print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
                     result = {"error": f"{type(e).__name__}: {e}"}
 
                 messages.append({
@@ -175,6 +243,6 @@ if __name__ == "__main__":
         result = run_agent_v2(sys.argv[1])
         print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
     finally:
-        # print("DEBUG: about to close client", flush=True)
+        print("DEBUG: about to close client", flush=True)
         client.close()
-        # print("DEBUG: client closed", flush=True)
+        print("DEBUG: client closed", flush=True)
