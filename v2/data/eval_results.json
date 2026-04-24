@@ -1,0 +1,83 @@
+[
+  {
+    "url": "https://jobs.smartrecruiters.com/Sobi/744000122393939-data-analyst?trid=2d92f286-613b-4daf-9dfa-6340ffbecf73",
+    "my_verdict": "apply",
+    "my_notes": "Good fit. Role is entry-level and aligns well with candidate's interest in data analysis, AI, and digital transformation. Candidate has relevant technical skills and a strong work description that matches the job requirements. No major red flags or gaps identified.",
+    "agent_verdict": "skip",
+    "tool_calls_made": 4,
+    "iterations": 5,
+    "final_message": "**Verdict: SKIP**\n\nThe job posting for the Data Analyst position at Sobi in Stockholm, Sweden, does not pass the hard filters due to the seniority requirement. The role requires 3+ years of experience, which exceeds the candidate's early-career criteria."
+  },
+  {
+    "url": "https://emp.jobylon.com/jobs/351928-postnord-group-esg-data-analyst-solna/?utm_source=linkedin",
+    "my_verdict": "borderline",
+    "my_notes": "requires several years, might be a senior role",
+    "agent_verdict": "skip",
+    "tool_calls_made": 4,
+    "iterations": 5,
+    "final_message": "**Verdict: SKIP**\n\nThe job posting for the ESG Data Analyst position at PostNord Group in Solna, Sweden, does not pass the hard filters due to the seniority requirement. The role requires several years of experience, which does not align with the candidate's early-career criteria."
+  },
+  {
+    "url": "https://sec.wd3.myworkdayjobs.com/Samsung_Careers/job/Torshamnsgatan-48-Kista-Stockholm-Sweden/Product-Manager-Home-Appliances---Graduate_R116416?source=SRC_02_12",
+    "my_verdict": "borderline",
+    "my_notes": "graduate role. Could be a fit if can leverage their technical and communication skills",
+    "agent_verdict": "skip",
+    "tool_calls_made": 1,
+    "iterations": 2,
+    "final_message": "The job posting appears to be a dead link or contains no content. Therefore, I cannot proceed with the analysis. Verdict: SKIP."
+  },
+  {
+    "url": "https://job-boards.greenhouse.io/grafanalabs/jobs/5980443004?src=LinkedIn",
+    "my_verdict": "borderline",
+    "my_notes": "entry-level role but seems more focused on software engineering than data analysis or AI. Could be a fit if candidate has relevant experience or can leverage their technical skills, but not an ideal match based on work description.",
+    "agent_verdict": "apply",
+    "tool_calls_made": 6,
+    "iterations": 7,
+    "final_message": "**Verdict: APPLY**\n\n**Summary:**\nThe position of People Analytics Analyst at Grafana Labs is a remote role based in Sweden. It involves using strong analytical and technical skills to influence business decisions through data. The role requires proficiency in SQL, AI tools, and data visualization, along with stakeholder management skills. The job is suitable for candidates with a background in data analysis and consulting, even if they lack specific experience in people analytics.\n\n**Reasoning:**\n- The candidate's skills in data analysis, SQL, and AI tools align well with the job requirements.\n- The role's focus on a consultative, business-facing mindset matches the candidate's experience in data and AI consulting.\n- There are no specific language requirements, and the candidate's proficiency in English is likely sufficient.\n\nOverall, the candidate's profile fits well with the job's requirements, making it a strong opportunity to pursue."
+  },
+  {
+    "url": "https://www.linkedin.com/jobs/view/4399536061/",
+    "my_verdict": "apply",
+    "my_notes": "Good fit. Role is entry-level and aligns well with candidate's interest in data analysis, AI, and digital transformation. Candidate has relevant technical skills and a strong work description that matches the job requirements. No major red flags or gaps identified.",
+    "agent_verdict": "skip",
+    "tool_calls_made": 4,
+    "iterations": 5,
+    "final_message": "SKIP: The job requires fluency in Swedish, but the candidate's profile only indicates conversational proficiency in Swedish."
+  },
+  {
+    "url": "https://sec.wd3.myworkdayjobs.com/Samsung_Careers/job/Torshamnsgatan-48-Kista-Stockholm-Sweden/Business-Controller-MX---Graduate_R116417?source=SRC_02_12",
+    "my_verdict": "borderline",
+    "my_notes": "graduate role. interesting field",
+    "agent_verdict": "skip",
+    "tool_calls_made": 1,
+    "iterations": 2,
+    "final_message": "The job posting appears to be a dead link or contains no content. Therefore, I cannot proceed with the analysis. The verdict is SKIP."
+  },
+  {
+    "url": "https://careers.cognizant.com/global-en/jobs/00067657702/business-analyst-retail/?source=JB-11500",
+    "my_verdict": "borderline",
+    "my_notes": "entry-level role. aligns with career focus",
+    "agent_verdict": "unknown",
+    "tool_calls_made": 1,
+    "iterations": 2,
+    "final_message": "I was unable to access the job posting at the provided URL due to a \"403 Forbidden\" error. This means I can't retrieve the job details for analysis. Please check the URL or try accessing it directly in your browser."
+  },
+  {
+    "url": "https://visa.wd5.myworkdayjobs.com/en-US/Visa/job/SE---Stockholm-Sweden/Analyst_REF079601W?share_id=LinkedIn_corporate_page",
+    "my_verdict": "borderline",
+    "my_notes": "entry-level role. aligns with career focus. Visa is a great company. Sales aspect could be a concern.",
+    "agent_verdict": "skip",
+    "tool_calls_made": 1,
+    "iterations": 2,
+    "final_message": "The job posting appears to be a dead link or contains no content. Therefore, I cannot proceed with further analysis. The verdict is SKIP."
+  },
+  {
+    "url": "https://www.financerecruitment.se/jobs/59/?utm_source=linkedin&utm_medium=listing&utm_content=59",
+    "my_verdict": "borderline",
+    "my_notes": "entry-level role. aligns with career focus\nhttps://assaabloy.jobs2web.com/job/Stockholm-Junior-Project-Manager-Digital-Compliance-SE-117-59/1276650601/?utm_source=LINKEDIN&utm_medium=referrer,skip,mid senior role. aligns with career focus. Good company\"",
+    "agent_verdict": "skip",
+    "tool_calls_made": 3,
+    "iterations": 4,
+    "final_message": "SKIP: The job posting for the position of \"Analyst, Corporate/Senior Analysts - Customer Analysis Section (CAS)\" at DNB in Stockholm, Sweden, does not pass the hard filters due to the seniority level. The job title includes \"Senior,\" and the candidate is not open to senior roles."
+  }
+]
