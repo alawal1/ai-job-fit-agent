@@ -24,3 +24,7 @@ Four bug categories hit during v2 build:
 2. Agent skipping tool → system prompt too loose, tightened to required workflow
 3. Silent exception swallower in _execute_tool wrapper → added [TOOL ERROR] logging
 4. Unescaped `{...}` in prompt template broke .format() → switched to string concat
+
+## Known limitations
+
+- **Workday and LinkedIn URLs cannot be fetched programmatically.** These sites render job content via JavaScript and block simple HTTP fetching. `fetch_job_posting` returns empty text for these URLs, and the agent correctly defaults to skip on empty input. Planned workaround (UI phase): detect these URL patterns client-side, prompt the user to paste the job description directly, and feed the text straight into `extract_job_signals`, bypassing `fetch_job_posting`.
