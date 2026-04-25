@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Triage Agent (v2)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: #1a202c;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+    .subtitle {
+      color: #718096;
+      margin-bottom: 24px;
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #4a5568;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    textarea {
+      min-height: 200px;
+      resize: vertical;
+    }
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .status.info { background: #bee3f8; color: #2c5282; }
+    .status.error { background: #fed7d7; color: #9b2c2c; }
+    .status.success { background: #c6f6d5; color: #22543d; }
+    .hidden { display: none; }
+    .result-section {
+      margin-top: 24px;
+    }
+    .verdict {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .verdict.apply { background: #c6f6d5; color: #22543d; }
+    .verdict.skip { background: #fed7d7; color: #9b2c2c; }
+    .verdict.borderline { background: #fef3c7; color: #78350f; }
+    .confidence {
+      color: #718096;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .section h3 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: #2d3748;
+    }
+    .list-item {
+      padding: 8px 12px;
+      background: #f7fafc;
+      border-left: 3px solid #667eea;
+      margin-bottom: 6px;
+      border-radius: 4px;
+    }
+    .empty-state {
+      color: #a0aec0;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Job Triage Agent (v2)</h1>
+      <p class="subtitle">Paste a job URL or description to get a triage verdict: apply, borderline, or skip.</p>
+      
+      <div id="url-input-section">
+        <div class="input-group">
+          <label for="job-url">Job Posting URL</label>
+          <input type="url" id="job-url" placeholder="https://example.com/job-posting">
+        </div>
+        <button class="btn" id="analyze-btn">Analyze</button>
+      </div>
+
+      <div id="paste-section" class="hidden">
+        <p class="status info">This site blocks automated fetching. Please paste the job description below:</p>
+        <div class="input-group">
+          <label for="job-text">Job Description</label>
+          <textarea id="job-text" placeholder="Paste the full job posting text here..."></textarea>
+        </div>
+        <button class="btn" id="analyze-text-btn">Analyze</button>
+        <button class="btn" id="back-btn" style="background: #cbd5e0; color: #2d3748; margin-left: 8px;">Back</button>
+      </div>
+
+      <div id="status-msg" class="hidden"></div>
+    </div>
+
+    <div id="result-card" class="card hidden">
+      <div id="result-content"></div>
+    </div>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById('job-url');
+    const textInput = document.getElementById('job-text');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const analyzeTextBtn = document.getElementById('analyze-text-btn');
+    const backBtn = document.getElementById('back-btn');
+    const urlSection = document.getElementById('url-input-section');
+    const pasteSection = document.getElementById('paste-section');
+    const statusMsg = document.getElementById('status-msg');
+    const resultCard = document.getElementById('result-card');
+    const resultContent = document.getElementById('result-content');
+
+    function showStatus(message, type) {
+      statusMsg.textContent = message;
+      statusMsg.className = `status ${type}`;
+      statusMsg.classList.remove('hidden');
+    }
+
+    function hideStatus() {
+      statusMsg.classList.add('hidden');
+    }
+
+    function showPasteSection() {
+      urlSection.classList.add('hidden');
+      pasteSection.classList.remove('hidden');
+      hideStatus();
+    }
+
+    function showUrlSection() {
+      pasteSection.classList.add('hidden');
+      urlSection.classList.remove('hidden');
+      textInput.value = '';
+      hideStatus();
+    }
+
+    function renderResult(data) {
+      const verdict = data.verdict || 'unknown';
+      const confidence = data.confidence || 'unknown';
+      const reasoning = data.reasoning || {};
+      const strengths = reasoning.strengths || [];
+      const gaps = reasoning.gaps || [];
+      const openQuestions = reasoning.open_questions || [];
+
+      let html = `
+        <span class="verdict ${verdict}">${verdict}</span>
+        <div class="confidence">Confidence: ${confidence}</div>
+      `;
+
+      if (strengths.length > 0) {
+        html += `<div class="section"><h3>Strengths</h3>`;
+        strengths.forEach(s => html += `<div class="list-item">${s}</div>`);
+        html += `</div>`;
+      } else {
+        html += `<div class="section"><h3>Strengths</h3><p class="empty-state">None identified</p></div>`;
+      }
+
+      if (gaps.length > 0) {
+        html += `<div class="section"><h3>Gaps</h3>`;
+        gaps.forEach(g => html += `<div class="list-item">${g}</div>`);
+        html += `</div>`;
+      } else {
+        html += `<div class="section"><h3>Gaps</h3><p class="empty-state">None identified</p></div>`;
+      }
+
+      if (openQuestions.length > 0) {
+        html += `<div class="section"><h3>Open Questions</h3>`;
+        openQuestions.forEach(q => html += `<div class="list-item">${q}</div>`);
+        html += `</div>`;
+      }
+
+      resultContent.innerHTML = html;
+      resultCard.classList.remove('hidden');
+    }
+
+    async function analyzeUrl() {
+      const url = urlInput.value.trim();
+      if (!url) {
+        showStatus('Please enter a URL', 'error');
+        return;
+      }
+
+      hideStatus();
+      resultCard.classList.add('hidden');
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = 'Analyzing...';
+
+      try {
+        const res = await fetch('/analyze/v2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await res.json();
+
+        if (data.blocked) {
+          showPasteSection();
+          return;
+        }
+
+        if (data.error) {
+          showStatus(data.error, 'error');
+          return;
+        }
+
+        // Extract verdict from final_message if not structured
+        if (!data.verdict && data.final_message) {
+          const msg = data.final_message.toLowerCase();
+          let extractedVerdict = 'unknown';
+          if (msg.includes('skip')) extractedVerdict = 'skip';
+          else if (msg.includes('apply')) extractedVerdict = 'apply';
+          else if (msg.includes('borderline')) extractedVerdict = 'borderline';
+          
+          renderResult({
+            verdict: extractedVerdict,
+            confidence: 'medium',
+            reasoning: {
+              strengths: [],
+              gaps: [],
+              open_questions: []
+            }
+          });
+          showStatus('Note: Agent returned unstructured output. This may indicate the agent loop needs adjustment.', 'info');
+        } else {
+          renderResult(data);
+        }
+
+      } catch (err) {
+        showStatus('Failed to analyze: ' + err.message, 'error');
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Analyze';
+      }
+    }
+
+    async function analyzeText() {
+      const text = textInput.value.trim();
+      if (text.length < 150) {
+        showStatus('Please paste at least 150 characters of job description', 'error');
+        return;
+      }
+
+      hideStatus();
+      resultCard.classList.add('hidden');
+      analyzeTextBtn.disabled = true;
+      analyzeTextBtn.textContent = 'Analyzing...';
+
+      try {
+        const res = await fetch('/analyze/v2/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_text: text })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          showStatus(data.error, 'error');
+          return;
+        }
+
+        if (!data.verdict && data.final_message) {
+          const msg = data.final_message.toLowerCase();
+          let extractedVerdict = 'unknown';
+          if (msg.includes('skip')) extractedVerdict = 'skip';
+          else if (msg.includes('apply')) extractedVerdict = 'apply';
+          else if (msg.includes('borderline')) extractedVerdict = 'borderline';
+          
+          renderResult({
+            verdict: extractedVerdict,
+            confidence: 'medium',
+            reasoning: {
+              strengths: [],
+              gaps: [],
+              open_questions: []
+            }
+          });
+          showStatus('Note: Agent returned unstructured output.', 'info');
+        } else {
+          renderResult(data);
+        }
+
+      } catch (err) {
+        showStatus('Failed to analyze: ' + err.message, 'error');
+      } finally {
+        analyzeTextBtn.disabled = false;
+        analyzeTextBtn.textContent = 'Analyze';
+      }
+    }
+
+    analyzeBtn.addEventListener('click', analyzeUrl);
+    analyzeTextBtn.addEventListener('click', analyzeText);
+    backBtn.addEventListener('click', showUrlSection);
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') analyzeUrl(); });
+  </script>
+</body>
+</html>

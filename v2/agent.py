@@ -162,16 +162,7 @@ Efficiency matters: do not call any tool more than once unnecessarily."""
 def run_agent_v2(url: str) -> dict:
     """
     Run the v2 triage agent on a single job URL.
-
-    Args:
-        url: The job posting URL to analyze.
-
-    Returns:
-        dict with the agent's final output, plus metadata:
-            - final_message: the agent's textual response
-            - tool_calls_made: count of tool calls in this run
-            - iterations: number of loop iterations
-            - error: present if the loop terminated abnormally
+    Returns structured verdict + reasoning from assess_fit if available.
     """
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -179,6 +170,7 @@ def run_agent_v2(url: str) -> dict:
     ]
 
     tool_calls_made = 0
+    assess_fit_result = None  # Track the last assess_fit output
 
     for iteration in range(MAX_ITERATIONS):
         response = client.chat.completions.create(
@@ -192,6 +184,14 @@ def run_agent_v2(url: str) -> dict:
         messages.append(message)
 
         if choice.finish_reason == "stop":
+            # If we got an assess_fit result, return that as structured output
+            if assess_fit_result:
+                return {
+                    **assess_fit_result,  # verdict, confidence, reasoning
+                    "tool_calls_made": tool_calls_made,
+                    "iterations": iteration + 1,
+                }
+            # Otherwise fall back to final_message
             return {
                 "final_message": message.content,
                 "tool_calls_made": tool_calls_made,
@@ -201,10 +201,12 @@ def run_agent_v2(url: str) -> dict:
         if choice.finish_reason == "tool_calls":
             for tool_call in message.tool_calls:
                 tool_calls_made += 1
-                print(f"[LOOP] iter={iteration} call#{tool_calls_made} → {tool_call.function.name}", flush=True)
                 args = json.loads(tool_call.function.arguments)
                 try:
                     result = _execute_tool(tool_call.function.name, args)
+                    # Capture assess_fit output
+                    if tool_call.function.name == "assess_fit" and "verdict" in result:
+                        assess_fit_result = result
                 except Exception as e:
                     print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
                     result = {"error": f"{type(e).__name__}: {e}"}
@@ -216,7 +218,6 @@ def run_agent_v2(url: str) -> dict:
                 })
             continue
 
-        # Any other finish_reason (length, content_filter) — bail.
         return {
             "final_message": message.content or "",
             "tool_calls_made": tool_calls_made,
@@ -224,15 +225,90 @@ def run_agent_v2(url: str) -> dict:
             "error": f"Unexpected finish_reason: {choice.finish_reason}",
         }
 
-    # Hit iteration cap without natural termination.
+    return {
+        "final_message": "",
+        "tool_calls_made": tool_calls_made,
+        "iterations": MAX_ITERATIONS,
+        "error": "Max iterations reached.",
+    }
+    
+def run_agent_v2_from_text(job_text: str) -> dict:
+    """
+    Run v2 triage agent when job text is provided directly (manual paste).
+    Skips fetch_job_posting, starts with extract_job_signals.
+    
+    Args:
+        job_text: Job posting text pasted by user.
+        
+    Returns:
+        Same shape as run_agent_v2.
+    """
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"The user provided this job description directly. Analyze it:\n\n{job_text}"},
+    ]
+    
+    tool_calls_made = 0
+    
+    for iteration in range(MAX_ITERATIONS):
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=messages,
+            tools=TOOL_DEFINITIONS,
+            temperature=0,
+        )
+        choice = response.choices[0]
+        message = choice.message
+        messages.append(message)
+        
+        if choice.finish_reason == "stop":
+            return {
+                "final_message": message.content,
+                "tool_calls_made": tool_calls_made,
+                "iterations": iteration + 1,
+            }
+        
+        if choice.finish_reason == "tool_calls":
+            for tool_call in message.tool_calls:
+                tool_calls_made += 1
+                
+                # Skip fetch_job_posting if the agent tries to call it
+                if tool_call.function.name == "fetch_job_posting":
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": json.dumps({"error": "Job text already provided by user, no URL to fetch."})
+                    })
+                    continue
+                
+                args = json.loads(tool_call.function.arguments)
+                try:
+                    result = _execute_tool(tool_call.function.name, args)
+                except Exception as e:
+                    print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
+                    result = {"error": f"{type(e).__name__}: {e}"}
+                
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": json.dumps(result, ensure_ascii=False),
+                })
+            continue
+        
+        return {
+            "final_message": message.content or "",
+            "tool_calls_made": tool_calls_made,
+            "iterations": iteration + 1,
+            "error": f"Unexpected finish_reason: {choice.finish_reason}",
+        }
+    
     return {
         "final_message": "",
         "tool_calls_made": tool_calls_made,
         "iterations": MAX_ITERATIONS,
         "error": "Max iterations reached without natural termination.",
     }
-
-
+    
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
