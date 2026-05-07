@@ -123,7 +123,7 @@ TOOL_DEFINITIONS = [
 
 # Runtime implementations. Tools that need the OpenAI client get it passed in.
 def _execute_tool(name: str, args: dict) -> dict:
-    print(f"[TOOL CALLED] name={name} args_keys={list(args.keys())}", flush=True)
+    # print(f"[TOOL CALLED] name={name} args_keys={list(args.keys())}", flush=True)
 
     if name == "fetch_job_posting":
         text = fetch_job_posting(args["url"])
@@ -143,7 +143,7 @@ def _execute_tool(name: str, args: dict) -> dict:
     else:
         result = {"error": f"Unknown tool: {name}"}
 
-    print(f"[TOOL RESULT] {name} → {json.dumps(result, ensure_ascii=False)[:300]}", flush=True)
+    # print(f"[TOOL RESULT] {name} → {json.dumps(result, ensure_ascii=False)[:300]}", flush=True)
     return result
 
 SYSTEM_PROMPT = """You are a job triage agent. You decide whether a job posting is worth the user applying to: apply, borderline, or skip.
@@ -153,10 +153,10 @@ Required workflow:
 2. Call extract_job_signals on the text — unless it's a dead link or boilerplate page.
 3. Call check_hard_filters on the signals.
 4. If check_hard_filters returns passed=false, return verdict SKIP with the failure reasons. Do not call more tools.
-5. If check_hard_filters returns passed=true, return a brief summary with verdict APPLY (full fit assessment coming in a future tool).
+5. If check_hard_filters returns passed=true, CALL assess_fit and use its output.
 6. Return the assess_fit verdict (apply/borderline/skip), confidence, and reasoning as your final answer.
 
-Do not produce a final answer on a live posting without calling extract_job_signals and check_hard_filters.
+Do not produce a final answer on a live posting without calling extract_job_signals, check_hard_filters, and then assess_fit when filters pass.
 Efficiency matters: do not call any tool more than once unnecessarily."""
 
 def run_agent_v2(url: str) -> dict:
@@ -182,17 +182,31 @@ def run_agent_v2(url: str) -> dict:
         choice = response.choices[0]
         message = choice.message
         messages.append(message)
-
+        
         if choice.finish_reason == "stop":
-            # If we got an assess_fit result, return that as structured output
             if assess_fit_result:
                 return {
-                    **assess_fit_result,  # verdict, confidence, reasoning
+                    **assess_fit_result,
                     "tool_calls_made": tool_calls_made,
                     "iterations": iteration + 1,
                 }
-            # Otherwise fall back to final_message
+            
+            # No assess_fit ran — synthesize structured output from final_message
+            msg = (message.content or "").lower()
+            verdict = "skip"  # default
+            if "apply" in msg and "skip" not in msg:
+                verdict = "apply"
+            elif "borderline" in msg:
+                verdict = "borderline"
+            
             return {
+                "verdict": verdict,
+                "confidence": "high" if "dead" in msg or "filled" in msg or "no longer available" in msg else "medium",
+                "reasoning": {
+                    "strengths": [],
+                    "gaps": [],
+                    "open_questions": []
+                },
                 "final_message": message.content,
                 "tool_calls_made": tool_calls_made,
                 "iterations": iteration + 1,
@@ -208,7 +222,7 @@ def run_agent_v2(url: str) -> dict:
                     if tool_call.function.name == "assess_fit" and "verdict" in result:
                         assess_fit_result = result
                 except Exception as e:
-                    print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
+                    # print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
                     result = {"error": f"{type(e).__name__}: {e}"}
 
                 messages.append({
@@ -236,12 +250,6 @@ def run_agent_v2_from_text(job_text: str) -> dict:
     """
     Run v2 triage agent when job text is provided directly (manual paste).
     Skips fetch_job_posting, starts with extract_job_signals.
-    
-    Args:
-        job_text: Job posting text pasted by user.
-        
-    Returns:
-        Same shape as run_agent_v2.
     """
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -249,6 +257,7 @@ def run_agent_v2_from_text(job_text: str) -> dict:
     ]
     
     tool_calls_made = 0
+    assess_fit_result = None  # ADD THIS LINE
     
     for iteration in range(MAX_ITERATIONS):
         response = client.chat.completions.create(
@@ -262,7 +271,28 @@ def run_agent_v2_from_text(job_text: str) -> dict:
         messages.append(message)
         
         if choice.finish_reason == "stop":
+            if assess_fit_result:
+                return {
+                    **assess_fit_result,
+                    "tool_calls_made": tool_calls_made,
+                    "iterations": iteration + 1,
+                }
+            
+            msg = (message.content or "").lower()
+            verdict = "skip"
+            if "apply" in msg and "skip" not in msg:
+                verdict = "apply"
+            elif "borderline" in msg:
+                verdict = "borderline"
+            
             return {
+                "verdict": verdict,
+                "confidence": "high" if "dead" in msg or "filled" in msg or "no longer available" in msg else "medium",
+                "reasoning": {
+                    "strengths": [],
+                    "gaps": [],
+                    "open_questions": []
+                },
                 "final_message": message.content,
                 "tool_calls_made": tool_calls_made,
                 "iterations": iteration + 1,
@@ -272,7 +302,6 @@ def run_agent_v2_from_text(job_text: str) -> dict:
             for tool_call in message.tool_calls:
                 tool_calls_made += 1
                 
-                # Skip fetch_job_posting if the agent tries to call it
                 if tool_call.function.name == "fetch_job_posting":
                     messages.append({
                         "role": "tool",
@@ -284,6 +313,9 @@ def run_agent_v2_from_text(job_text: str) -> dict:
                 args = json.loads(tool_call.function.arguments)
                 try:
                     result = _execute_tool(tool_call.function.name, args)
+                    # ADD THIS BLOCK - capture assess_fit output
+                    if tool_call.function.name == "assess_fit" and "verdict" in result:
+                        assess_fit_result = result
                 except Exception as e:
                     print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
                     result = {"error": f"{type(e).__name__}: {e}"}

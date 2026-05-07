@@ -1,13 +1,13 @@
 # backend.py
 import os
+import json
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from agent import run_agent_v2, run_agent_v2_from_text  # v2 — we'll add the second one
+from agent import run_agent_v2, run_agent_v2_from_text
 
 app = FastAPI()
 
-# Domains known to block our fetcher
 BLOCKED_DOMAINS = ["linkedin.com", "workday.com", "myworkdayjobs.com"]
 
 
@@ -17,29 +17,9 @@ def is_blocked_url(url: str) -> bool:
 
 @app.get("/", response_class=FileResponse)
 def read_index():
-    return FileResponse("index.html")  # v1 UI stays as the default
+    return FileResponse("index.html")
 
 
-@app.get("/v2", response_class=FileResponse)
-def read_index_v2():
-    return FileResponse("index_v2.html")
-
-
-# v1 endpoint — unchanged
-@app.post("/analyze")
-async def analyze(request: Request):
-    payload = await request.json()
-    url = payload.get("url")
-    if not url or not isinstance(url, str):
-        raise HTTPException(status_code=400, detail={"error": "A valid 'url' field is required."})
-    try:
-        result = run_agent(url.strip())
-    except Exception as exc:
-        return JSONResponse(status_code=500, content={"error": str(exc)})
-    return JSONResponse(content=result)
-
-
-# v2 endpoint — URL flow
 @app.post("/analyze/v2")
 async def analyze_v2(request: Request):
     payload = await request.json()
@@ -53,17 +33,16 @@ async def analyze_v2(request: Request):
 
     try:
         result = run_agent_v2(url)
+        print(f"[BACKEND] Returning: {json.dumps(result, indent=2)}", flush=True)
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 
-    # Check if the fetched text was empty (silent failure)
     if result.get("tool_calls_made", 0) == 1 and "empty" in (result.get("final_message") or "").lower():
         return JSONResponse(content={"blocked": True, "message": "Could not fetch content. Please paste the job description manually."})
 
     return JSONResponse(content=result)
 
 
-# v2 endpoint — manual paste flow
 @app.post("/analyze/v2/text")
 async def analyze_v2_text(request: Request):
     payload = await request.json()
@@ -73,6 +52,7 @@ async def analyze_v2_text(request: Request):
 
     try:
         result = run_agent_v2_from_text(job_text.strip())
+        print(f"[BACKEND] Returning: {json.dumps(result, indent=2)}", flush=True)
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 

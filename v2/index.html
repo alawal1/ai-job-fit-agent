@@ -134,6 +134,7 @@
           <input type="url" id="job-url" placeholder="https://example.com/job-posting">
         </div>
         <button class="btn" id="analyze-btn">Analyze</button>
+        <button class="btn" id="manual-paste-btn" style="background: #718096; margin-top: 8px;">Or paste job text manually</button>
       </div>
 
       <div id="paste-section" class="hidden">
@@ -348,6 +349,11 @@
     analyzeTextBtn.addEventListener('click', analyzeText);
     backBtn.addEventListener('click', showUrlSection);
     urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') analyzeUrl(); });
+    const manualPasteBtn = document.getElementById('manual-paste-btn');
+
+      manualPasteBtn.addEventListener('click', () => {
+        showPasteSection();
+      });
   </script>
 </body>
 </html>

@@ -10,7 +10,7 @@ Built as a portfolio project to demonstrate agent design: tool definition, orche
 2. Extracts triage-relevant signals (title, company, location, languages, seniority)
 3. Applies hard filters (language match + LLM-judged seniority fit)
 4. If filters pass, assesses overall fit against the candidate profile
-5. Returns a structured verdict with confidence + strengths + gaps
+5. Returns: verdict (apply/borderline/skip), confidence (high/medium/low) strengths, gaps
 
 The agent decides the tool sequence itself — it skips extraction on dead postings, short-circuits on failed filters, and returns early when a decision is clear.
 
@@ -18,12 +18,12 @@ The agent decides the tool sequence itself — it skips extraction on dead posti
 
 Standard OpenAI tool-calling loop. Max 8 iterations. No framework (no LangChain etc.) — pure Python + OpenAI SDK.
 
-Five tools:
+**Four tools:**
 - `fetch_job_posting` — HTTP fetch + HTML cleanup
-- `extract_job_signals` — LLM-based extraction of triage fields
+- `extract_job_signals` — LLM extraction of triage-relevant fields
 - `check_hard_filters` — deterministic language check + LLM seniority judgment
-- `assess_fit` — LLM-based soft judgment with structured output
-- `search_company_context` — deferred (v2.1)
+- `assess_fit` — LLM soft judgment, returns structured verdict + reasoning
+
 
 See `DESIGN.md` for full design rationale.
 
@@ -50,31 +50,40 @@ Evaluation:
 ```bash
 python eval_runner.py
 ```
-
 ## Project structure
 
-- `agent.py` — main agent loop + tool definitions
-- `skills/` — individual tool implementations
-- `data/profile.json` — candidate profile (hard filters + soft signals)
-- `data/eval_set.csv` — ground-truth verdicts for evaluation
-- `eval_runner.py` — runs the agent across the eval set and reports agreement
-- `backend.py` — FastAPI server
-- `index.html` — web UI (v1, v2 UI planned)
+```
+v2/
+├── agent.py              # Main loop + tool definitions
+├── backend.py            # FastAPI server
+├── index.html            # Web UI
+├── skills/               # Tool implementations
+│   ├── fetch_job.py
+│   ├── extract_signals.py
+│   ├── check_filters.py
+│   └── assess_fit.py
+├── data/
+│   ├── profile.json      # Candidate profile (hard filters + soft signals)
+│   └── eval_set.csv      # Ground-truth verdicts for evaluation
+└── eval_runner.py        # Eval against manual scoring
+```
 
 ## Evaluation
 
-The agent is evaluated against a manually-scored eval set. Agreement between the agent's verdicts and my manual scoring is tracked as the primary quality metric.
+Agent evaluated against manually-scored job postings. Primary metric: agreement with my triage decisions.
 
-Current state: 80% agreement on fetchable URLs (v2 alpha, small eval set).
+**Current:** 80% agreement on 5 fetchable URLs (small eval set, v2 alpha).
+
+Disagreements traced to profile miscalibration (overly optimistic manual scoring vs. stated hard filters). Agent held to stricter-but-principled verdicts.
 
 ## Known limitations
 
-- Some sites (Workday, LinkedIn, some careers portals) block automated fetching. The UI supports pasting job text manually for these cases.
-- v2 uses training-knowledge-based company context with an eval-triggered upgrade path to web search.
+- Workday, LinkedIn, some careers portals block automated fetching → UI supports manual paste fallback
+- Company context uses training knowledge (no web search) with eval-triggered upgrade path planned
 
-## What's next
+## What's next (v2.1)
 
-- Web UI for v2 (`/analyze/v2`) with manual-paste fallback for blocked URLs
-- Expand eval set to 15+ URLs
 - CV recommendation tool for `apply` verdicts
-- Optional web search for borderline cases
+- SQLite for cross-analysis history
+- Expand eval set to 15+ URLs
+- Web search for borderline company context
