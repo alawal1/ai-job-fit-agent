@@ -68,14 +68,14 @@ def extract_job_signals(job_text: str, client) -> dict:
             "key_skills_mentioned": [],
             "extraction_confidence": "low",
         }
-    print("[EXTRACT] calling LLM", flush=True)
+    # print("[EXTRACT] calling LLM", flush=True)
     response = client.chat.completions.create(
         model="gpt-4o",
         temperature=0,
         messages=[{"role": "user", "content": EXTRACTION_PROMPT + "\n\nJob posting text:\n---\n" + job_text + "\n---"}],
         response_format={"type": "json_object"},
     )
-    print("[EXTRACT] LLM returned", flush=True)
+    # print("[EXTRACT] LLM returned", flush=True)
 
     content = response.choices[0].message.content
     try:

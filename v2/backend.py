@@ -33,7 +33,7 @@ async def analyze_v2(request: Request):
 
     try:
         result = run_agent_v2(url)
-        print(f"[BACKEND] Returning: {json.dumps(result, indent=2)}", flush=True)
+        # print(f"[BACKEND] Returning: {json.dumps(result, indent=2)}", flush=True)
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 
@@ -52,7 +52,7 @@ async def analyze_v2_text(request: Request):
 
     try:
         result = run_agent_v2_from_text(job_text.strip())
-        print(f"[BACKEND] Returning: {json.dumps(result, indent=2)}", flush=True)
+        # print(f"[BACKEND] Returning: {json.dumps(result, indent=2)}", flush=True)
     except Exception as exc:
         return JSONResponse(status_code=500, content={"error": str(exc)})
 
