@@ -34,15 +34,23 @@ RETURN JSON with this exact shape:
 }
 
 Return ONLY the JSON object. No preamble."""
-
-
 def assess_fit(signals: dict, profile: dict, client, company_context: dict | None = None) -> dict:
     """
     Evaluate fit. Returns verdict + confidence + reasoning + enrichment_used flag.
     """
+    # Load full CV
+    try:
+        with open("data/cv.md", "r", encoding="utf-8") as f:
+            cv_text = f.read()
+    except FileNotFoundError:
+        cv_text = "(CV file not found - using profile summary only)"
+    
     prompt = (
         ASSESS_PROMPT
         + json.dumps(profile, indent=2)
+        + "\n\nCANDIDATE CV (detailed work history):\n---\n"
+        + cv_text
+        + "\n---"
         + "\n\nJOB SIGNALS:\n"
         + json.dumps(signals, indent=2)
     )

@@ -17,6 +17,7 @@ from skills.fetch_job import fetch_job_posting
 from skills.extract_signals import extract_job_signals
 from skills.check_filters import check_hard_filters
 from skills.assess_fit import assess_fit
+from skills.suggest_cv_improvements import suggest_cv_improvements
 
 load_dotenv()
 client = OpenAI()
@@ -117,6 +118,30 @@ TOOL_DEFINITIONS = [
                 "required": ["signals"],
             },
         },
+    },{
+        "type": "function",
+        "function": {
+            "name": "suggest_cv_improvements",
+            "description": (
+                "Suggests CV improvements tailored to a specific job. "
+                "Call this ONLY when assess_fit returns verdict='apply' or 'borderline'. "
+                "Requires signals object and assess_fit reasoning as arguments."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "signals": {
+                        "type": "object",
+                        "description": "Job signals from extract_job_signals",
+                    },
+                    "assess_fit_reasoning": {
+                        "type": "object",
+                        "description": "The reasoning dict from assess_fit output",
+                    },
+                },
+                "required": ["signals", "assess_fit_reasoning"],
+            },
+        },
     },
 ]
 
@@ -140,6 +165,11 @@ def _execute_tool(name: str, args: dict) -> dict:
             result = {"error": "Missing 'signals' argument. You must pass the signals object from extract_job_signals."}
         else:
             result = assess_fit(args["signals"], PROFILE, client)
+    elif name == "suggest_cv_improvements":
+        if "signals" not in args or "assess_fit_reasoning" not in args:
+            result = {"error": "Missing required arguments. Pass signals and assess_fit_reasoning."}
+        else:
+            result = suggest_cv_improvements(args["signals"], args["assess_fit_reasoning"])
     else:
         result = {"error": f"Unknown tool: {name}"}
 
@@ -154,7 +184,8 @@ Required workflow:
 3. Call check_hard_filters on the signals.
 4. If check_hard_filters returns passed=false, return verdict SKIP with the failure reasons. Do not call more tools.
 5. If check_hard_filters returns passed=true, CALL assess_fit and use its output.
-6. Return the assess_fit verdict (apply/borderline/skip), confidence, and reasoning as your final answer.
+6. If assess_fit returns verdict='apply' or 'borderline', CALL suggest_cv_improvements to provide tailored CV guidance.
+7. Return the assess_fit verdict, confidence, reasoning, and CV recommendations (if available) as your final answer.
 
 Do not produce a final answer on a live posting without calling extract_job_signals, check_hard_filters, and then assess_fit when filters pass.
 Efficiency matters: do not call any tool more than once unnecessarily."""
