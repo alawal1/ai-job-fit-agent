@@ -203,6 +203,11 @@
         <div class="confidence">Confidence: ${confidence}</div>
       `;
 
+      const reason = reasoning.reason || data.reason || data.final_message || '';
+      if (reason) {
+        html += `<div class="section"><h3>Reason</h3><p>${reason}</p></div>`;
+      }
+
       if (strengths.length > 0) {
         html += `<div class="section"><h3>Strengths</h3>`;
         strengths.forEach(s => html += `<div class="list-item">${s}</div>`);
@@ -224,6 +229,20 @@
         openQuestions.forEach(q => html += `<div class="list-item">${q}</div>`);
         html += `</div>`;
       }
+
+      if (data.cv_recommendations && data.cv_recommendations.recommendations && data.cv_recommendations.recommendations.length > 0) {
+        html += `<div class="section"><h3>📋 CV Recommendations</h3>`;
+        data.cv_recommendations.recommendations.forEach(rec => html += `<div class="list-item">${rec}</div>`);
+        html += `</div>`;
+      }
+
+      if (data.cv_recommendations && data.cv_recommendations.cv_gaps && data.cv_recommendations.cv_gaps.length > 0) {
+        html += `<div class="section"><h3>⚠️ Missing from CV</h3>`;
+        data.cv_recommendations.cv_gaps.forEach(gap => html += `<div class="list-item">${gap}</div>`);
+        html += `</div>`;
+      }
+
+      resultContent.innerHTML = html;
 
       resultContent.innerHTML = html;
       resultCard.classList.remove('hidden');
@@ -274,8 +293,10 @@
             reasoning: {
               strengths: [],
               gaps: [],
-              open_questions: []
-            }
+              open_questions: [],
+              reason: data.final_message || 'Agent returned unstructured output.'
+            },
+            final_message: data.final_message,
           });
           showStatus('Note: Agent returned unstructured output. This may indicate the agent loop needs adjustment.', 'info');
         } else {
@@ -329,8 +350,10 @@
             reasoning: {
               strengths: [],
               gaps: [],
-              open_questions: []
-            }
+              open_questions: [],
+              reason: data.final_message || 'Agent returned unstructured output.'
+            },
+            final_message: data.final_message,
           });
           showStatus('Note: Agent returned unstructured output.', 'info');
         } else {

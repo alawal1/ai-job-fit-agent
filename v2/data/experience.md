@@ -37,4 +37,30 @@ Deutschlandradio – Production & Operations | Jul 2017 – Sep 2023
 - Coordinated cross-functional teams (editorial, technical) and resolved operational issues in real time
 - Optimized processes in a live production environment, balancing quality, speed, and system constraints
 ## Deutschlandradio Reference (April 2018)
-Evaluation: Comprehensive technical expertise, high quality awareness, excellent editing skills, quick to adapt to new tasks, reliable under difficult conditions, proactive, forward-thinking, highly motivated, very good performance at all times.
+- Audiovisual Media Designer Apprenticeship (2014–2017)
+- Bundesbeste 2017 (best nationwide apprentice)
+
+## Video & Content Creation
+- Adobe Creative Cloud, Cap Cut
+- Multi-camera editing, post-production, color grading
+- Short-form video for digital platforms
+- Visual storytelling, storyboarding
+- Camera operation, lighting, studio/field recording
+
+## Audio Production
+- Pro Tools, Sequoia, Audacity
+- Audio mixing, mastering, sound design
+- Studio and live broadcast recording
+
+## Digital Content & Social Media
+- Multimedia storytelling (video + audio + graphics)
+- Content adaptation for digital platforms
+- Platform-specific formatting and optimization
+- Graphics creation for video content
+
+## Project Coordination
+- Production workflow management (pre-production → post-production)
+- Scheduling, resource coordination, deadline management
+- Asset management, version control
+- Cross-team coordination (editorial + technical)
+- Stakeholder communication and feedback integration

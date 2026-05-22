@@ -148,7 +148,7 @@ TOOL_DEFINITIONS = [
 
 # Runtime implementations. Tools that need the OpenAI client get it passed in.
 def _execute_tool(name: str, args: dict) -> dict:
-    # print(f"[TOOL CALLED] name={name} args_keys={list(args.keys())}", flush=True)
+    print(f"[TOOL CALLED] name={name} args_keys={list(args.keys())}", flush=True)
 
     if name == "fetch_job_posting":
         text = fetch_job_posting(args["url"])
@@ -173,7 +173,7 @@ def _execute_tool(name: str, args: dict) -> dict:
     else:
         result = {"error": f"Unknown tool: {name}"}
 
-    # print(f"[TOOL RESULT] {name} → {json.dumps(result, ensure_ascii=False)[:300]}", flush=True)
+    print(f"[TOOL RESULT] {name} → {json.dumps(result, ensure_ascii=False)[:300]}", flush=True)
     return result
 
 SYSTEM_PROMPT = """You are a job triage agent. You decide whether a job posting is worth the user applying to: apply, borderline, or skip.
@@ -187,8 +187,8 @@ Required workflow:
 6. If assess_fit returns verdict='apply' or 'borderline', CALL suggest_cv_improvements to provide tailored CV guidance.
 7. Return the assess_fit verdict, confidence, reasoning, and CV recommendations (if available) as your final answer.
 
-Do not produce a final answer on a live posting without calling extract_job_signals, check_hard_filters, and then assess_fit when filters pass.
-Efficiency matters: do not call any tool more than once unnecessarily."""
+Do not produce a final answer on a live posting without calling extract_job_signals, check_hard_filters, and assess_fit when filters pass.
+After calling suggest_cv_improvements, produce a brief final message and stop."""
 
 def run_agent_v2(url: str) -> dict:
     """
@@ -202,6 +202,8 @@ def run_agent_v2(url: str) -> dict:
 
     tool_calls_made = 0
     assess_fit_result = None  # Track the last assess_fit output
+    last_check_filters_result = None
+    cv_recommendations_result = None
 
     for iteration in range(MAX_ITERATIONS):
         response = client.chat.completions.create(
@@ -218,25 +220,33 @@ def run_agent_v2(url: str) -> dict:
             if assess_fit_result:
                 return {
                     **assess_fit_result,
+                    "cv_recommendations": cv_recommendations_result,  
                     "tool_calls_made": tool_calls_made,
                     "iterations": iteration + 1,
                 }
             
             # No assess_fit ran — synthesize structured output from final_message
-            msg = (message.content or "").lower()
+            msg = (message.content or "").strip()
+            reason = msg
+            if last_check_filters_result is not None and not last_check_filters_result.get("passed", True):
+                filter_reasons = [fr.get("reason", "") for fr in last_check_filters_result.get("filter_results", []) if fr.get("reason")]
+                if filter_reasons:
+                    reason = " ".join(filter_reasons)
             verdict = "skip"  # default
-            if "apply" in msg and "skip" not in msg:
+            msg_lower = msg.lower()
+            if "apply" in msg_lower and "skip" not in msg_lower:
                 verdict = "apply"
-            elif "borderline" in msg:
+            elif "borderline" in msg_lower:
                 verdict = "borderline"
             
             return {
                 "verdict": verdict,
-                "confidence": "high" if "dead" in msg or "filled" in msg or "no longer available" in msg else "medium",
+                "confidence": "high" if any(token in msg_lower for token in ["dead", "filled", "no longer available"]) else "medium",
                 "reasoning": {
                     "strengths": [],
                     "gaps": [],
-                    "open_questions": []
+                    "open_questions": [],
+                    "reason": reason or "No structured reasoning was available."
                 },
                 "final_message": message.content,
                 "tool_calls_made": tool_calls_made,
@@ -249,11 +259,15 @@ def run_agent_v2(url: str) -> dict:
                 args = json.loads(tool_call.function.arguments)
                 try:
                     result = _execute_tool(tool_call.function.name, args)
-                    # Capture assess_fit output
                     if tool_call.function.name == "assess_fit" and "verdict" in result:
                         assess_fit_result = result
+                    if tool_call.function.name == "check_hard_filters" and "passed" in result:
+                        last_check_filters_result = result
+                    # Capture CV recommendations  
+                    if tool_call.function.name == "suggest_cv_improvements" and "recommendations" in result:
+                        cv_recommendations_result = result
                 except Exception as e:
-                    # print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
+                    print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
                     result = {"error": f"{type(e).__name__}: {e}"}
 
                 messages.append({
@@ -288,7 +302,8 @@ def run_agent_v2_from_text(job_text: str) -> dict:
     ]
     
     tool_calls_made = 0
-    assess_fit_result = None  # ADD THIS LINE
+    assess_fit_result = None
+    last_check_filters_result = None
     
     for iteration in range(MAX_ITERATIONS):
         response = client.chat.completions.create(
@@ -305,24 +320,32 @@ def run_agent_v2_from_text(job_text: str) -> dict:
             if assess_fit_result:
                 return {
                     **assess_fit_result,
+                    "cv_recommendations": cv_recommendations_result,
                     "tool_calls_made": tool_calls_made,
                     "iterations": iteration + 1,
                 }
             
-            msg = (message.content or "").lower()
+            msg = (message.content or "").strip()
+            reason = msg
+            if last_check_filters_result is not None and not last_check_filters_result.get("passed", True):
+                filter_reasons = [fr.get("reason", "") for fr in last_check_filters_result.get("filter_results", []) if fr.get("reason")]
+                if filter_reasons:
+                    reason = " ".join(filter_reasons)
             verdict = "skip"
-            if "apply" in msg and "skip" not in msg:
+            msg_lower = msg.lower()
+            if "apply" in msg_lower and "skip" not in msg_lower:
                 verdict = "apply"
-            elif "borderline" in msg:
+            elif "borderline" in msg_lower:
                 verdict = "borderline"
             
             return {
                 "verdict": verdict,
-                "confidence": "high" if "dead" in msg or "filled" in msg or "no longer available" in msg else "medium",
+                "confidence": "high" if any(token in msg_lower for token in ["dead", "filled", "no longer available"]) else "medium",
                 "reasoning": {
                     "strengths": [],
                     "gaps": [],
-                    "open_questions": []
+                    "open_questions": [],
+                    "reason": reason or "No structured reasoning was available."
                 },
                 "final_message": message.content,
                 "tool_calls_made": tool_calls_made,
@@ -344,9 +367,12 @@ def run_agent_v2_from_text(job_text: str) -> dict:
                 args = json.loads(tool_call.function.arguments)
                 try:
                     result = _execute_tool(tool_call.function.name, args)
-                    # ADD THIS BLOCK - capture assess_fit output
                     if tool_call.function.name == "assess_fit" and "verdict" in result:
                         assess_fit_result = result
+                    if tool_call.function.name == "check_hard_filters" and "passed" in result:
+                        last_check_filters_result = result
+                    if tool_call.function.name == "suggest_cv_improvements" and "recommendations" in result:
+                        cv_recommendations_result = result
                 except Exception as e:
                     print(f"[TOOL ERROR] {tool_call.function.name}: {type(e).__name__}: {e}", flush=True)
                     result = {"error": f"{type(e).__name__}: {e}"}

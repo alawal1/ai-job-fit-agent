@@ -12,9 +12,10 @@ ASSESS_PROMPT = """You are evaluating whether a job posting is a good fit for a 
 Return a verdict: apply, borderline, or skip.
 
 - apply: clear fit. Role aligns with work description and candidate has relevant strengths.
-- skip: clear non-fit. Role is off- work description, wrong domain, or gaps are substantial.
+- skip: clear non-fit. Role is off-work description, wrong domain, or gaps are substantial.
 - borderline: genuinely unclear. Use this ONLY when you can articulate specific open_questions that would change the verdict if answered.
 
+If you select skip, still identify relevant strengths and gaps and explain why the role should be skipped.
 Do not use 'borderline' as a hedge. If you cannot name concrete open_questions, pick apply or skip.
 
 CANDIDATE PROFILE:
@@ -29,7 +30,8 @@ RETURN JSON with this exact shape:
   "reasoning": {
     "strengths": ["2-5 concrete matches between posting and profile"],
     "gaps": ["0-5 requirements in the posting not covered by profile"],
-    "open_questions": ["Empty if verdict is high-confidence apply/skip. Non-empty for borderline."]
+    "open_questions": ["Empty if verdict is high-confidence apply/skip. Non-empty for borderline."],
+    "reason": "A brief explanation for the verdict, especially why a skip recommendation was made."
   }
 }
 
@@ -38,19 +40,29 @@ def assess_fit(signals: dict, profile: dict, client, company_context: dict | Non
     """
     Evaluate fit. Returns verdict + confidence + reasoning + enrichment_used flag.
     """
-    # Load full CV
-    try:
-        with open("data/cv.md", "r", encoding="utf-8") as f:
-            cv_text = f.read()
-    except FileNotFoundError:
-        cv_text = "(CV file not found - using profile summary only)"
+    # Load detailed profile context
+    profile_context = ""
+    profile_files = ["experience.md", "skills.md", "education.md", "positioning.md"]
+    
+    for filename in profile_files:
+        filepath = f"data/profile/{filename}"
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                profile_context += f"\n## {filename.replace('.md', '').title()}\n"
+                profile_context += f.read()
+                profile_context += "\n"
+        except FileNotFoundError:
+            continue
+    
+    if not profile_context:
+        profile_context = "(No detailed profile files found)"
     
     prompt = (
         ASSESS_PROMPT
         + json.dumps(profile, indent=2)
-        + "\n\nCANDIDATE CV (detailed work history):\n---\n"
-        + cv_text
-        + "\n---"
+        + "\n\nDETAILED CANDIDATE PROFILE:\n---"
+        + profile_context
+        + "---"
         + "\n\nJOB SIGNALS:\n"
         + json.dumps(signals, indent=2)
     )
