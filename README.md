@@ -1,34 +1,62 @@
 # Job Fit Agent
 
-A Python agent that analyzes job postings and evaluates candidate fit using an agentic loop with tool use.
+A polished landing page for a job-fit evaluation assistant designed to make hiring decisions easier and show the work behind every application.
 
-## What it does
-- Fetches job postings directly from URLs
-- Loads a structured candidate profile from local markdown files
-- Reasons about fit using OpenAI tool use — the model decides what to check, not hardcoded steps
-- Returns a structured verdict: fit score, matches, gaps, CV recommendations
-- Batch processes multiple URLs and saves results to Excel automatically
-- Skips roles below 70% fit and detects duplicates
+This repository contains a candidate-driven agent that reads job postings, compares them with a candidate profile, and produces structured recommendations for fit, shortlisting, and CV improvements.
 
-## How to run
+## Why this repo matters
+- Provides a clear, data-driven view of how a candidate matches a role
+- Converts job descriptions into fit scores, role matches, and gap analysis
+- Generates candidate-facing suggestions for CV and profile updates
+- Helps hiring managers quickly understand why a candidate is a strong fit
 
+## What you will find here
+- A main top-level implementation for quick batch evaluation and reporting
+- `v1/` for the first prototype and earlier experimental tooling
+- `v2/` for the current advanced version with richer analysis, filters, and improved fit signals
+
+## Branches / versions explained
+- `main` / root folder: the current repo landing page and core evaluation entrypoint.
+  - Best for sharing as a GitHub link with a hiring manager.
+  - Contains the high-level project overview, batch runner, and profile data model.
+- `v1/`: the initial agent prototype.
+  - Early job-fetching, profile loading, and basic fit reasoning.
+  - Useful for understanding the first design and how the tool started.
+- `v2/`: the improved production-ready workflow.
+  - Better signal extraction, fit assessment, filter checking, and CV recommendation features.
+  - Includes a dashboard-style interface and more structured outputs.
+
+## How to explore the repo
+1. Read this `README.md` as the project landing page.
+2. Review the candidate profile files under `data/` for skills, experience, education, projects, and positioning.
+3. Compare the implementation in `v1/` and `v2/` to see the evolution of the agent.
+4. Use `batch.py` at the root for the current batch processing flow.
+
+## How to run the current version
 Add job URLs to `data/jobs/urls.txt`, one per line:
-```
+
+```text
 https://company.com/job-posting
 ```
 
 Then run:
+
 ```bash
 python batch.py
 ```
 
-Results are saved to `outputs/` as markdown reports and to `tracker.xlsx`.
+This creates evaluation results in `outputs/` and updates the tracker file with job fit details.
 
-## Project structure
-- `agent.py` — agentic loop, tool definitions, OpenAI integration
-- `batch.py` — batch runner, Excel tracker, duplicate detection
-- `data/` — candidate profile files (skills, experience, education, projects)
-- `outputs/` — per-job markdown reports
+## Key files at the root
+- `agent.py` — core agent loop, tool definitions, OpenAI integration
+- `batch.py` — batch job runner, duplicate detection, and report generation
+- `data/` — candidate profile and job URL source data
+- `outputs/` — generated fit reports for each analyzed job
+
+## Why send this link to a hiring manager
+- It shows the candidate’s process, not just a resume.
+- It explains how job fit is measured, with transparent outputs.
+- It highlights the project’s structure and the matured version history.
 
 ## Stack
-Python, OpenAI API (tool use), openpyxl, BeautifulSoup
+Python, OpenAI API, openpyxl, BeautifulSoup
