@@ -1,62 +1,103 @@
-# Job Fit Agent
+# Job Application Agent
 
-A polished landing page for a job-fit evaluation assistant designed to make hiring decisions easier and show the work behind every application.
+**Status:** Work in progress (v2.1) — core features working, expanding evaluation set
 
-This repository contains a candidate-driven agent that reads job postings, compares them with a candidate profile, and produces structured recommendations for fit, shortlisting, and CV improvements.
+An AI tool that reads job postings and tells you: **apply**, **maybe**, or **skip**. For strong matches, it suggests how to improve your CV for that specific job.
 
-## Why this repo matters
-- Provides a clear, data-driven view of how a candidate matches a role
-- Converts job descriptions into fit scores, role matches, and gap analysis
-- Generates candidate-facing suggestions for CV and profile updates
-- Helps hiring managers quickly understand why a candidate is a strong fit
+Built to show: tool-calling with LLMs, mixing rule-based + AI logic, testing against real decisions, and iterative development with git branches.
 
-## What you will find here
-- A main top-level implementation for quick batch evaluation and reporting
-- `v1/` for the first prototype and earlier experimental tooling
-- `v2/` for the current advanced version with richer analysis, filters, and improved fit signals
+---
 
-## Branches / versions explained
-- `main` / root folder: the current repo landing page and core evaluation entrypoint.
-  - Best for sharing as a GitHub link with a hiring manager.
-  - Contains the high-level project overview, batch runner, and profile data model.
-- `v1/`: the initial agent prototype.
-  - Early job-fetching, profile loading, and basic fit reasoning.
-  - Useful for understanding the first design and how the tool started.
-- `v2/`: the improved production-ready workflow.
-  - Better signal extraction, fit assessment, filter checking, and CV recommendation features.
-  - Includes a dashboard-style interface and more structured outputs.
+## What it does
 
-## How to explore the repo
-1. Read this `README.md` as the project landing page.
-2. Review the candidate profile files under `data/` for skills, experience, education, projects, and positioning.
-3. Compare the implementation in `v1/` and `v2/` to see the evolution of the agent.
-4. Use `batch.py` at the root for the current batch processing flow.
+**The flow:**
+1. Gets the job posting (paste manually if the site blocks automated access)
+2. Pulls out key info: title, company, location, language requirements, experience level
+3. Checks deal-breakers: Do you speak the required languages? Does the seniority level match?
+4. If it passes, evaluates overall fit: what matches, what doesn't, how confident is the assessment
+5. **New in v2.1:** For jobs worth applying to, suggests specific CV improvements
 
-## How to run the current version
-Add job URLs to `data/jobs/urls.txt`, one per line:
+**How it's designed:**
+- Uses simple rules where possible (language matching), AI only when human judgment is needed (seniority level)
+- Stops early on dead postings or failed requirements (doesn't waste API calls)
+- Tools know when to call each other through clear instructions, not hardcoded sequences
 
-```text
-https://company.com/job-posting
-```
-
-Then run:
-
-```bash
-python batch.py
-```
-
-This creates evaluation results in `outputs/` and updates the tracker file with job fit details.
-
-## Key files at the root
-- `agent.py` — core agent loop, tool definitions, OpenAI integration
-- `batch.py` — batch job runner, duplicate detection, and report generation
-- `data/` — candidate profile and job URL source data
-- `outputs/` — generated fit reports for each analyzed job
-
-## Why send this link to a hiring manager
-- It shows the candidate’s process, not just a resume.
-- It explains how job fit is measured, with transparent outputs.
-- It highlights the project’s structure and the matured version history.
+---
 
 ## Stack
-Python, OpenAI API, openpyxl, BeautifulSoup
+
+Python • FastAPI • OpenAI API (function calling) • Plain JavaScript
+
+No frameworks like LangChain — built from scratch to understand how agents actually work.
+
+---
+
+## Quick start
+
+```bash
+pip install fastapi uvicorn openai python-dotenv requests beautifulsoup4
+echo "OPENAI_API_KEY=sk-..." > .env
+
+# Web interface
+uvicorn backend:app --reload
+# → http://localhost:8000
+
+# Command line
+python agent.py "https://example.com/job"
+```
+
+---
+
+## Testing
+
+I tested the agent against jobs I manually scored myself.
+
+**Current:** 80% agreement on 5 working URLs (small test set so far)
+
+The disagreements were interesting: the agent was stricter than my manual scoring. When I said "I'd apply anyway," the agent correctly said "this fails your stated requirements." Kept the agent's stricter logic.
+
+---
+
+## File structure
+
+```
+v2/
+├── agent.py              # Main loop + tool setup
+├── backend.py            # Web server
+├── index.html            # UI
+├── skills/               # Each tool (fetch, extract, check, assess, suggest)
+├── data/
+│   ├── profile.json      # My requirements (languages, seniority)
+│   ├── profile/          # Detailed background for the AI
+│   └── eval_set.csv      # Test cases with expected answers
+└── DESIGN.md             # Why I built it this way + debugging notes
+```
+
+---
+
+## Current limitations
+
+- **Some sites block automated access:** LinkedIn, Workday, others — you paste the text manually instead
+- **Company research uses training data only:** No live web search yet (planned upgrade)
+
+---
+
+## Next steps (v2.2+)
+
+- [ ] Test on 15+ jobs across different industries
+- [ ] Save history to database to spot patterns across applications
+- [ ] Add web search for companies I don't know
+- [ ] Deploy somewhere (runs locally now)
+
+---
+
+## Why this project
+
+I built this to show I can:
+- Design tools that work together without hardcoding every step
+- Mix simple rules with AI where each makes sense
+- Test against real data and learn from the gaps
+- Use git properly (built CV feature on a branch, merged when working)
+- Ship in small pieces instead of trying to build everything at once
+
+Made for junior data/AI consultant job applications. Check commit history to see how it evolved.

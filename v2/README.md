@@ -1,6 +1,6 @@
 # Job Fit Agent (v2)
 
-An agentic job-posting triage tool. Given a job URL, it decides whether the role is worth applying to — returning `apply`, `borderline`, or `skip` with structured reasoning.
+An agentic job-posting tool. Given a job URL, it decides whether the role is worth applying to — returning `apply`, `borderline`, or `skip` with structured reasoning.
 
 Built as a portfolio project to demonstrate agent design: tool definition, orchestration via tool descriptions, and evaluation against manual ground truth.
 
