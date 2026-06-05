@@ -80,8 +80,7 @@ TOOL_DEFINITIONS = [
                 "Call this after extract_job_signals has returned successfully. "
                 "You MUST pass the full signals object returned by extract_job_signals as the 'signals' argument. "
                 "Do not call this tool without the signals argument. "
-                "If this returns passed=false, the triage is complete — return a skip verdict immediately. "
-                "Do not call assess_fit when hard filters fail."
+                "Regardless of whether this passes or fails, always proceed to call assess_fit next."
             ),
             "parameters": {
                 "type": "object",
@@ -182,12 +181,12 @@ Required workflow:
 1. Call fetch_job_posting to get the text.
 2. Call extract_job_signals on the text — unless it's a dead link or boilerplate page.
 3. Call check_hard_filters on the signals.
-4. If check_hard_filters returns passed=false, return verdict SKIP with the failure reasons. Do not call more tools.
-5. If check_hard_filters returns passed=true, CALL assess_fit and use its output.
+4. Always call assess_fit, regardless of whether check_hard_filters passed or failed. If filters failed, assess_fit will still identify relevant strengths and gaps.
+5. Use the assess_fit verdict if filters passed. If filters failed, override the verdict to SKIP but keep the assess_fit reasoning (strengths and gaps).
 6. If assess_fit returns verdict='apply' or 'borderline', CALL suggest_cv_improvements to provide tailored CV guidance.
-7. Return the assess_fit verdict, confidence, reasoning, and CV recommendations (if available) as your final answer.
+7. Return the final verdict, confidence, reasoning (including strengths and gaps), and CV recommendations (if available) as your final answer.
 
-Do not produce a final answer on a live posting without calling extract_job_signals, check_hard_filters, and assess_fit when filters pass.
+Do not produce a final answer on a live posting without calling extract_job_signals, check_hard_filters, and assess_fit.
 After calling suggest_cv_improvements, produce a brief final message and stop."""
 
 def run_agent_v2(url: str) -> dict:
@@ -218,13 +217,22 @@ def run_agent_v2(url: str) -> dict:
         
         if choice.finish_reason == "stop":
             if assess_fit_result:
-                return {
+                result = {
                     **assess_fit_result,
-                    "cv_recommendations": cv_recommendations_result,  
+                    "cv_recommendations": cv_recommendations_result,
                     "tool_calls_made": tool_calls_made,
                     "iterations": iteration + 1,
                 }
-            
+                # Hard filter failure overrides verdict to skip regardless of assess_fit output
+                if last_check_filters_result is not None and not last_check_filters_result.get("passed", True):
+                    filter_reasons = [fr.get("reason", "") for fr in last_check_filters_result.get("filter_results", []) if fr.get("reason")]
+                    result["verdict"] = "skip"
+                    if filter_reasons:
+                        existing_reason = (result.get("reasoning") or {}).get("reason", "")
+                        filter_prefix = "Hard filter failed: " + " ".join(filter_reasons)
+                        result.setdefault("reasoning", {})["reason"] = (filter_prefix + ". " + existing_reason).strip(". ")
+                return result
+
             # No assess_fit ran — synthesize structured output from final_message
             msg = (message.content or "").strip()
             reason = msg
@@ -304,7 +312,8 @@ def run_agent_v2_from_text(job_text: str) -> dict:
     tool_calls_made = 0
     assess_fit_result = None
     last_check_filters_result = None
-    
+    cv_recommendations_result = None
+
     for iteration in range(MAX_ITERATIONS):
         response = client.chat.completions.create(
             model=MODEL,
@@ -315,16 +324,24 @@ def run_agent_v2_from_text(job_text: str) -> dict:
         choice = response.choices[0]
         message = choice.message
         messages.append(message)
-        
+
         if choice.finish_reason == "stop":
             if assess_fit_result:
-                return {
+                result = {
                     **assess_fit_result,
                     "cv_recommendations": cv_recommendations_result,
                     "tool_calls_made": tool_calls_made,
                     "iterations": iteration + 1,
                 }
-            
+                if last_check_filters_result is not None and not last_check_filters_result.get("passed", True):
+                    filter_reasons = [fr.get("reason", "") for fr in last_check_filters_result.get("filter_results", []) if fr.get("reason")]
+                    result["verdict"] = "skip"
+                    if filter_reasons:
+                        existing_reason = (result.get("reasoning") or {}).get("reason", "")
+                        filter_prefix = "Hard filter failed: " + " ".join(filter_reasons)
+                        result.setdefault("reasoning", {})["reason"] = (filter_prefix + ". " + existing_reason).strip(". ")
+                return result
+
             msg = (message.content or "").strip()
             reason = msg
             if last_check_filters_result is not None and not last_check_filters_result.get("passed", True):
@@ -337,7 +354,7 @@ def run_agent_v2_from_text(job_text: str) -> dict:
                 verdict = "apply"
             elif "borderline" in msg_lower:
                 verdict = "borderline"
-            
+
             return {
                 "verdict": verdict,
                 "confidence": "high" if any(token in msg_lower for token in ["dead", "filled", "no longer available"]) else "medium",
@@ -351,7 +368,7 @@ def run_agent_v2_from_text(job_text: str) -> dict:
                 "tool_calls_made": tool_calls_made,
                 "iterations": iteration + 1,
             }
-        
+
         if choice.finish_reason == "tool_calls":
             for tool_call in message.tool_calls:
                 tool_calls_made += 1
