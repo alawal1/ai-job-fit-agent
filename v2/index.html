@@ -120,31 +120,160 @@
       color: #a0aec0;
       font-style: italic;
     }
+    .mode-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 16px;
+    }
+    .mode-btn {
+      padding: 8px 16px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #718096;
+      transition: all 0.2s;
+    }
+    .mode-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .comparison-table th {
+      background: #f7fafc;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #2d3748;
+      border-bottom: 2px solid #e2e8f0;
+      cursor: pointer;
+    }
+    .comparison-table th:hover {
+      background: #edf2f7;
+    }
+    .comparison-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .comparison-table tr:hover {
+      background: #f7fafc;
+    }
+    .score-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      min-width: 40px;
+      text-align: center;
+    }
+    .score-badge.high { background: #c6f6d5; color: #22543d; }
+    .score-badge.medium { background: #fef3c7; color: #78350f; }
+    .score-badge.low { background: #fed7d7; color: #9b2c2c; }
+    .count-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #edf2f7;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: #2d3748;
+    }
+    .expandable-row {
+      cursor: pointer;
+    }
+    .expanded-details {
+      display: none;
+    }
+    .expanded-details.show {
+      display: table-row;
+    }
+    .details-cell {
+      padding: 20px !important;
+      background: #f7fafc;
+    }
+    .filter-group {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 6px 12px;
+      border: 1px solid #cbd5e0;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+    .loading-progress {
+      margin-top: 16px;
+      padding: 12px;
+      background: #bee3f8;
+      border-radius: 8px;
+      color: #2c5282;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
       <h1>Job Triage Agent (v2)</h1>
-      <p class="subtitle">Paste a job URL or description to get a triage verdict: apply, borderline, or skip.</p>
-      
-      <div id="url-input-section">
-        <div class="input-group">
-          <label for="job-url">Job Posting URL</label>
-          <input type="url" id="job-url" placeholder="https://example.com/job-posting">
-        </div>
-        <button class="btn" id="analyze-btn">Analyze</button>
-        <button class="btn" id="manual-paste-btn" style="background: #718096; margin-top: 8px;">Or paste job text manually</button>
+      <p class="subtitle">Analyze and rank jobs by fit.</p>
+
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="mode-single">Single Job</button>
+        <button class="mode-btn" id="mode-batch">Compare Multiple</button>
       </div>
 
-      <div id="paste-section" class="hidden">
-        <p class="status info">This site blocks automated fetching. Please paste the job description below:</p>
-        <div class="input-group">
-          <label for="job-text">Job Description</label>
-          <textarea id="job-text" placeholder="Paste the full job posting text here..."></textarea>
+      <div id="single-mode">
+        <p class="subtitle">Paste a job URL or description to get a triage verdict: apply, borderline, or skip.</p>
+        <div id="url-input-section">
+          <div class="input-group">
+            <label for="job-url">Job Posting URL</label>
+            <input type="url" id="job-url" placeholder="https://example.com/job-posting">
+          </div>
+          <button class="btn" id="analyze-btn">Analyze</button>
+          <button class="btn" id="manual-paste-btn" style="background: #718096; margin-top: 8px;">Or paste job text manually</button>
         </div>
-        <button class="btn" id="analyze-text-btn">Analyze</button>
-        <button class="btn" id="back-btn" style="background: #cbd5e0; color: #2d3748; margin-left: 8px;">Back</button>
+
+        <div id="paste-section" class="hidden">
+          <p class="status info">This site blocks automated fetching. Please paste the job description below:</p>
+          <div class="input-group">
+            <label for="job-text">Job Description</label>
+            <textarea id="job-text" placeholder="Paste the full job posting text here..."></textarea>
+          </div>
+          <button class="btn" id="analyze-text-btn">Analyze</button>
+          <button class="btn" id="back-btn" style="background: #cbd5e0; color: #2d3748; margin-left: 8px;">Back</button>
+        </div>
+      </div>
+
+      <div id="batch-mode" class="hidden">
+        <p class="subtitle">Paste multiple job URLs (one per line) to compare and rank them.</p>
+        <div class="input-group">
+          <label for="batch-urls">Job URLs (2-10 URLs, one per line)</label>
+          <textarea id="batch-urls" placeholder="https://example.com/job1&#10;https://example.com/job2&#10;https://example.com/job3"></textarea>
+        </div>
+        <button class="btn" id="analyze-batch-btn">Analyze & Rank</button>
+        <div class="filter-group">
+          <span style="align-self: center; color: #718096; font-size: 0.9rem;">Filter:</span>
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="apply">Apply</button>
+          <button class="filter-btn" data-filter="borderline">Borderline</button>
+          <button class="filter-btn" data-filter="skip">Skip</button>
+        </div>
       </div>
 
       <div id="status-msg" class="hidden"></div>
@@ -152,6 +281,11 @@
 
     <div id="result-card" class="card hidden">
       <div id="result-content"></div>
+    </div>
+
+    <div id="batch-result-card" class="card hidden">
+      <h2>Ranked Results</h2>
+      <div id="batch-result-content"></div>
     </div>
   </div>
 
@@ -368,15 +502,196 @@
       }
     }
 
+    let batchData = [];
+    let currentFilter = 'all';
+    let currentSort = 'score';
+    let sortAscending = false;
+
+    function getScoreBadgeClass(score) {
+      if (score >= 80) return 'high';
+      if (score >= 50) return 'medium';
+      return 'low';
+    }
+
+    function renderComparisonTable() {
+      let filtered = batchData.filter(job => {
+        if (currentFilter === 'all') return true;
+        return job.verdict.toLowerCase() === currentFilter;
+      });
+
+      filtered.sort((a, b) => {
+        let aVal, bVal;
+        if (currentSort === 'score') {
+          aVal = a.composite_score;
+          bVal = b.composite_score;
+        } else if (currentSort === 'verdict') {
+          const verdictOrder = { apply: 3, borderline: 2, skip: 1 };
+          aVal = verdictOrder[a.verdict.toLowerCase()] || 0;
+          bVal = verdictOrder[b.verdict.toLowerCase()] || 0;
+        } else if (currentSort === 'confidence') {
+          const confOrder = { high: 3, medium: 2, low: 1 };
+          aVal = confOrder[a.confidence.toLowerCase()] || 0;
+          bVal = confOrder[b.confidence.toLowerCase()] || 0;
+        }
+        return sortAscending ? aVal - bVal : bVal - aVal;
+      });
+
+      let html = '<table class="comparison-table"><thead><tr>';
+      html += '<th onclick="setSortColumn(\'score\')">Rank ↕ Score</th>';
+      html += '<th onclick="setSortColumn(\'verdict\')">Verdict ↕</th>';
+      html += '<th onclick="setSortColumn(\'confidence\')">Confidence ↕</th>';
+      html += '<th>Strengths</th>';
+      html += '<th>Gaps</th>';
+      html += '</tr></thead><tbody>';
+
+      filtered.forEach((job, idx) => {
+        const scoreClass = getScoreBadgeClass(job.composite_score);
+        const reasoning = job.reasoning || {};
+        const strengths = reasoning.strengths || [];
+        const gaps = reasoning.gaps || [];
+
+        html += `<tr class="expandable-row" onclick="toggleDetails(${batchData.indexOf(job)})">`;
+        html += `<td><span class="score-badge ${scoreClass}">${Math.round(job.composite_score)}</span></td>`;
+        html += `<td><span class="verdict ${job.verdict.toLowerCase()}">${job.verdict}</span></td>`;
+        html += `<td>${job.confidence}</td>`;
+        html += `<td><span class="count-badge">${strengths.length} matches</span></td>`;
+        html += `<td><span class="count-badge">${gaps.length} gaps</span></td>`;
+        html += '</tr>';
+
+        html += `<tr id="details-${batchData.indexOf(job)}" class="expanded-details"><td colspan="5"><div class="details-cell">`;
+        html += `<strong>URL:</strong> <a href="${job.url}" target="_blank">${job.url}</a><br>`;
+        const reason = reasoning.reason || job.final_message || '';
+        if (reason) html += `<strong>Reason:</strong> <p>${reason}</p>`;
+        if (strengths.length > 0) {
+          html += '<strong>Strengths:</strong><ul>';
+          strengths.forEach(s => html += `<li>${s}</li>`);
+          html += '</ul>';
+        }
+        if (gaps.length > 0) {
+          html += '<strong>Gaps:</strong><ul>';
+          gaps.forEach(g => html += `<li>${g}</li>`);
+          html += '</ul>';
+        }
+        html += '</div></td></tr>';
+      });
+
+      html += '</tbody></table>';
+
+      if (filtered.length === 0) {
+        html = '<p class="empty-state">No jobs match the selected filter.</p>';
+      }
+
+      document.getElementById('batch-result-content').innerHTML = html;
+    }
+
+    function toggleDetails(index) {
+      const detailsRow = document.getElementById(`details-${index}`);
+      if (detailsRow) {
+        detailsRow.classList.toggle('show');
+      }
+    }
+
+    function setSortColumn(column) {
+      if (currentSort === column) {
+        sortAscending = !sortAscending;
+      } else {
+        currentSort = column;
+        sortAscending = false;
+      }
+      renderComparisonTable();
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+      renderComparisonTable();
+    }
+
+    async function analyzeBatch() {
+      const urlsText = document.getElementById('batch-urls').value.trim();
+      const urls = urlsText.split('\n').map(u => u.trim()).filter(u => u);
+
+      if (urls.length < 2 || urls.length > 10) {
+        showStatus(`Please provide 2-10 URLs. Got ${urls.length}.`, 'error');
+        return;
+      }
+
+      hideStatus();
+      document.getElementById('batch-result-card').classList.add('hidden');
+      const btn = document.getElementById('analyze-batch-btn');
+      btn.disabled = true;
+      btn.textContent = 'Analyzing...';
+
+      try {
+        const res = await fetch('/analyze/v2/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urls })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          showStatus(data.error, 'error');
+          return;
+        }
+
+        batchData = data.jobs || [];
+        currentFilter = 'all';
+        currentSort = 'score';
+        sortAscending = false;
+
+        if (batchData.length === 0) {
+          showStatus('No jobs could be analyzed. Check the URLs and try again.', 'error');
+          return;
+        }
+
+        renderComparisonTable();
+        document.getElementById('batch-result-card').classList.remove('hidden');
+
+        if (data.failed_urls && data.failed_urls.length > 0) {
+          showStatus(`${batchData.length} job(s) analyzed. ${data.failed_urls.length} URL(s) failed to fetch.`, 'info');
+        } else {
+          showStatus(`Successfully analyzed ${batchData.length} job(s)!`, 'success');
+        }
+      } catch (err) {
+        showStatus('Failed to analyze batch: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Analyze & Rank';
+      }
+    }
+
+    function switchMode(mode) {
+      document.getElementById('single-mode').classList.toggle('hidden', mode === 'batch');
+      document.getElementById('batch-mode').classList.toggle('hidden', mode === 'single');
+      document.getElementById('result-card').classList.add('hidden');
+      document.getElementById('batch-result-card').classList.add('hidden');
+      hideStatus();
+
+      document.getElementById('mode-single').classList.toggle('active', mode === 'single');
+      document.getElementById('mode-batch').classList.toggle('active', mode === 'batch');
+    }
+
     analyzeBtn.addEventListener('click', analyzeUrl);
     analyzeTextBtn.addEventListener('click', analyzeText);
     backBtn.addEventListener('click', showUrlSection);
     urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') analyzeUrl(); });
     const manualPasteBtn = document.getElementById('manual-paste-btn');
 
-      manualPasteBtn.addEventListener('click', () => {
-        showPasteSection();
-      });
+    manualPasteBtn.addEventListener('click', () => {
+      showPasteSection();
+    });
+
+    document.getElementById('mode-single').addEventListener('click', () => switchMode('single'));
+    document.getElementById('mode-batch').addEventListener('click', () => switchMode('batch'));
+    document.getElementById('analyze-batch-btn').addEventListener('click', analyzeBatch);
+    document.querySelectorAll('[data-filter]').forEach(btn => {
+      btn.addEventListener('click', (e) => setFilter(e.target.dataset.filter));
+    });
   </script>
 </body>
 </html>

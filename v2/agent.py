@@ -28,6 +28,28 @@ MAX_ITERATIONS = 8
 MODEL = "gpt-4o"
 
 
+def calculate_composite_score(result: dict) -> float:
+    """
+    Generates a composite score (0-100) from verdict, confidence, strengths, and gaps.
+    Used for ranking multiple jobs.
+    """
+    verdict = result.get("verdict", "skip").lower()
+    confidence = result.get("confidence", "low").lower()
+    reasoning = result.get("reasoning") or {}
+
+    verdict_map = {"apply": 10, "borderline": 5, "skip": 0}
+    confidence_map = {"high": 1.0, "medium": 0.67, "low": 0.33}
+
+    verdict_score = verdict_map.get(verdict, 0) * 30
+    confidence_score = confidence_map.get(confidence, 0.33) * 20
+    strengths_bonus = len(reasoning.get("strengths", [])) * 5
+    gaps_penalty = len(reasoning.get("gaps", [])) * 3
+
+    raw_score = verdict_score + confidence_score + strengths_bonus - gaps_penalty
+    normalized = max(0, min(100, (raw_score + 50) / 4.5))
+
+    return round(normalized, 1)
+
 # Tool schemas shown to the LLM.
 TOOL_DEFINITIONS = [
     {
