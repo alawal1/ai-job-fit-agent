@@ -3,4 +3,4 @@ venv/
 __pycache__/
 outputs/
 output.md
-*.pyc
+*.pyc.DS_Store

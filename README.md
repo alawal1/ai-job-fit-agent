@@ -42,8 +42,19 @@ echo "OPENAI_API_KEY=sk-..." > .env
 uvicorn backend:app --reload
 # → http://localhost:8000
 
-# Command line
+# Command line — single job
 python agent.py "https://example.com/job"
+```
+
+### Batch mode (2–10 URLs)
+
+Paste multiple job URLs into the web interface and they'll be analysed in parallel. Results are ranked by fit score so the best matches appear first.
+
+```bash
+# Or via the API directly
+curl -X POST http://localhost:8000/analyze/v2/batch \
+  -H "Content-Type: application/json" \
+  -d '{"urls": ["https://example.com/job1", "https://example.com/job2"]}'
 ```
 
 ---
