@@ -1,114 +1,89 @@
-# Job Application Agent
+# Job Fit Agent (v2)
 
-**Status:** Work in progress (v2.1) — core features working, expanding evaluation set
+An agentic job-posting tool. Given a job URL, it decides whether the role is worth applying to — returning `apply`, `borderline`, or `skip` with structured reasoning.
 
-An AI tool that reads job postings and tells you: **apply**, **maybe**, or **skip**. For strong matches, it suggests how to improve your CV for that specific job.
-
-Built to show: tool-calling with LLMs, mixing rule-based + AI logic, testing against real decisions, and iterative development with git branches.
-
----
+Built as a portfolio project to demonstrate agent design: tool definition, orchestration via tool descriptions, and evaluation against manual ground truth.
 
 ## What it does
 
-**The flow:**
-1. Gets the job posting (paste manually if the site blocks automated access)
-2. Pulls out key info: title, company, location, language requirements, experience level
-3. Checks deal-breakers: Do you speak the required languages? Does the seniority level match?
-4. If it passes, evaluates overall fit: what matches, what doesn't, how confident is the assessment
-5. **New in v2.1:** For jobs worth applying to, suggests specific CV improvements
+1. Fetches a job posting from a URL
+2. Extracts triage-relevant signals (title, company, location, languages, seniority)
+3. Applies hard filters (language match + LLM-judged seniority fit)
+4. If filters pass, assesses overall fit against the candidate profile
+5. Returns: verdict (apply/borderline/skip), confidence (high/medium/low) strengths, gaps
 
-**How it's designed:**
-- Uses simple rules where possible (language matching), AI only when human judgment is needed (seniority level)
-- Stops early on dead postings or failed requirements (doesn't waste API calls)
-- Tools know when to call each other through clear instructions, not hardcoded sequences
+The agent decides the tool sequence itself — it skips extraction on dead postings, short-circuits on failed filters, and returns early when a decision is clear.
 
----
+## Architecture
+
+Standard OpenAI tool-calling loop. Max 8 iterations. No framework (no LangChain etc.) — pure Python + OpenAI SDK.
+
+**Four tools:**
+- `fetch_job_posting` — HTTP fetch + HTML cleanup
+- `extract_job_signals` — LLM extraction of triage-relevant fields
+- `check_hard_filters` — deterministic language check + LLM seniority judgment
+- `assess_fit` — LLM soft judgment, returns structured verdict + reasoning
+
+
+See `DESIGN.md` for full design rationale.
 
 ## Stack
 
-Python • FastAPI • OpenAI API (function calling) • Plain JavaScript
+Python, FastAPI, OpenAI API (tool use + JSON mode), vanilla JS frontend.
 
-No frameworks like LangChain — built from scratch to understand how agents actually work.
-
----
-
-## Quick start
+## How to run
 
 ```bash
 pip install fastapi uvicorn openai python-dotenv requests beautifulsoup4
 echo "OPENAI_API_KEY=sk-..." > .env
-
-# Web interface
 uvicorn backend:app --reload
-# → http://localhost:8000
-
-# Command line — single job
-python agent.py "https://example.com/job"
 ```
 
-### Batch mode (2–10 URLs)
+Then open `http://localhost:8000`.
 
-Paste multiple job URLs into the web interface and they'll be analysed in parallel. Results are ranked by fit score so the best matches appear first.
-
+CLI usage:
 ```bash
-# Or via the API directly
-curl -X POST http://localhost:8000/analyze/v2/batch \
-  -H "Content-Type: application/json" \
-  -d '{"urls": ["https://example.com/job1", "https://example.com/job2"]}'
+python agent.py "https://example.com/job-posting"
 ```
 
----
-
-## Testing
-
-I tested the agent against jobs I manually scored myself.
-
-**Current:** 80% agreement on 5 working URLs (small test set so far)
-
-The disagreements were interesting: the agent was stricter than my manual scoring. When I said "I'd apply anyway," the agent correctly said "this fails your stated requirements." Kept the agent's stricter logic.
-
----
-
-## File structure
+Evaluation:
+```bash
+python eval_runner.py
+```
+## Project structure
 
 ```
 v2/
-├── agent.py              # Main loop + tool setup
-├── backend.py            # Web server
-├── index.html            # UI
-├── skills/               # Each tool (fetch, extract, check, assess, suggest)
+├── agent.py              # Main loop + tool definitions
+├── backend.py            # FastAPI server
+├── index.html            # Web UI
+├── skills/               # Tool implementations
+│   ├── fetch_job.py
+│   ├── extract_signals.py
+│   ├── check_filters.py
+│   └── assess_fit.py
 ├── data/
-│   ├── profile.json      # My requirements (languages, seniority)
-│   ├── profile/          # Detailed background for the AI
-│   └── eval_set.csv      # Test cases with expected answers
-└── DESIGN.md             # Why I built it this way + debugging notes
+│   ├── profile.json      # Candidate profile (hard filters + soft signals)
+│   └── eval_set.csv      # Ground-truth verdicts for evaluation
+└── eval_runner.py        # Eval against manual scoring
 ```
 
----
+## Evaluation
 
-## Current limitations
+Agent evaluated against manually-scored job postings. Primary metric: agreement with my triage decisions.
 
-- **Some sites block automated access:** LinkedIn, Workday, others — you paste the text manually instead
-- **Company research uses training data only:** No live web search yet (planned upgrade)
+**Current:** 80% agreement on 5 fetchable URLs (small eval set, v2 alpha).
 
----
+Disagreements traced to profile miscalibration (overly optimistic manual scoring vs. stated hard filters). Agent held to stricter-but-principled verdicts.
 
-## Next steps (v2.2+)
+## Known limitations
 
-- [ ] Test on 15+ jobs across different industries
-- [ ] Save history to database to spot patterns across applications
-- [ ] Add web search for companies I don't know
-- [ ] Deploy somewhere (runs locally now)
+- Workday, LinkedIn, some careers portals block automated fetching → UI supports manual paste fallback
+- Company context uses training knowledge (no web search) with eval-triggered upgrade path planned
 
----
+## What's next (v2.1)
 
-## Why this project
-
-I built this to show I can:
-- Design tools that work together without hardcoding every step
-- Mix simple rules with AI where each makes sense
-- Test against real data and learn from the gaps
-- Use git properly (built CV feature on a branch, merged when working)
-- Ship in small pieces instead of trying to build everything at once
-
-Made for junior data/AI consultant job applications. Check commit history to see how it evolved.
+- CV recommendation tool for `apply` verdicts
+- SQLite for cross-analysis history
+- Expand eval set to 15+ URLs
+- Web search for borderline company context
