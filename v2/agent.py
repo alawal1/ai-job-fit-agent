@@ -326,6 +326,7 @@ def run_agent_v2_from_text(job_text: str) -> dict:
     tool_calls_made = 0
     assess_fit_result = None
     last_check_filters_result = None
+    cv_recommendations_result = None 
     
     for iteration in range(MAX_ITERATIONS):
         response = client.chat.completions.create(

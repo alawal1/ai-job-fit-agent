@@ -21,6 +21,7 @@ Return a JSON object with these exact keys:
     - level must be one of: "basic", "conversational", "fluent", "native", "unspecified"
     - required_or_preferred must be one of: "required", "preferred"
     - Only include languages EXPLICITLY mentioned. Do not assume English.
+    - Always use the English name for the language (e.g. "German" not "Deutsch", "French" not "Français", "Swedish" not "Svenska").
     - If level is not stated, use "unspecified".
     - "must have", "required" → required; "nice to have", "preferred", "plus" → preferred
 - seniority_indicators: object with keys {title_level, years_experience_required, role_context_snippet}
